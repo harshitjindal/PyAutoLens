@@ -218,7 +218,7 @@ class AbstractTracer(AbstractTracerCosmology):
         # potential = self.potential
         # surface_density = self.surface_density
 
-        effective_convergence = deflections_y - deflections_x # replace this with the gradient operator, or whatever.
+        effective_convergence = deflections_y * deflections_x # replace this with the gradient operator, or whatever.
 
         # Now we've computed our effective convergence, we can return it and it'll be accessible to an instance of the
         # tracer.
