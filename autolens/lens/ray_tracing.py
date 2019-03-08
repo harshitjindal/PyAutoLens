@@ -194,6 +194,38 @@ class AbstractTracer(AbstractTracerCosmology):
                                              cosmology=cosmology)
 
     @property
+    def example_property(self):
+
+        # A property is one of the attributes of the instance of a tracer we use to compute lensing quantities. e.g.
+
+        # tracer = TracerMultiPlanes(galaxies=[g0, g1], image_plane_grid_stack=grid_stack)
+        # print(tracer.deflections_y)
+        # print(tracer.deflections_x)
+
+        # Currently, to access this property we would print:
+        # print(tracer.example_property)
+
+        # We will want to rename this to something use, e.g. 'effective_convergence'
+
+        # A property has access to all other properties, but we can extract the deflection angles here to compute a new
+        # quantity using the class's 'self' attribute:
+
+        deflections_y = self.deflections_y
+        deflections_x = self.deflections_x
+
+        # We can also access the potential, surface_density, etc.
+
+        # potential = self.potential
+        # surface_density = self.surface_density
+
+        effective_convergence = deflections_y + deflections_x # replace this with the gradient operator, or whatever.
+
+        # Now we've computed our effective convergence, we can return it and it'll be accessible to an instance of the
+        # tracer.
+
+        return effective_convergence
+
+    @property
     def image_plane(self):
         return self.planes[0]
 
@@ -550,7 +582,7 @@ class TracerMultiPlanes(AbstractTracer):
 
                     new_grid_stack = \
                         lens_util.grid_stack_from_deflection_stack(grid_stack=new_grid_stack,
-                                                                          deflection_stack=scaled_deflection_stack)
+                                                                   deflection_stack=scaled_deflection_stack)
 
             planes.append(pl.Plane(galaxies=galaxies_in_planes[plane_index], grid_stack=new_grid_stack,
                                    border=border, compute_deflections=compute_deflections, cosmology=cosmology))

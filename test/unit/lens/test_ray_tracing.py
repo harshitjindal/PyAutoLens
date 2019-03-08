@@ -1778,6 +1778,38 @@ class TestMultiTracer(object):
                                                                   [0.0, -1.0], [0.0, 0.0], [0.0, 1.0],
                                                                   [-1.0, -1.0], [-1.0, 1.0]])).all()
 
+    class TestQiuhanExample:
+
+        def test__test_of_effective_convergence(self, grid_stack):
+
+            # It is good practise to make sure all new properties / functions we add are unit-tested. That is, we'll
+            # write a test here that asserts the numerical value we calculate from the property of the tracer is correct.
+
+            # This could either use analytic values we compute on pen and paper, or by compairing different methods
+            # methods which should produce the same result.
+
+            # Lets use our grid_stack (which comes from the pytest.fixture above) to create a multi-plane tracer,
+            # and extract the effective_convergence from it using the property you'll have wrriten.
+
+            g0 = g.Galaxy(redshift=1.0, light_profile=lp.EllipticalSersic(intensity=0.1))
+            g1 = g.Galaxy(redshift=1.0, light_profile=lp.EllipticalSersic(intensity=0.2))
+            g2 = g.Galaxy(redshift=2.0, light_profile=lp.EllipticalSersic(intensity=0.3))
+
+            tracer = ray_tracing.TracerMultiPlanes(galaxies=[g0, g1, g2], image_plane_grid_stack=grid_stack,
+                                                   cosmology=cosmo.Planck15)
+
+            effective_convergence = tracer.effective_convergence
+
+            # Because galaxies g0 and g1 are at the same reddshift, their effective convergence should be the sum of
+            #   theri individual surface densitiies (multipled by some constant value?)
+
+            effective_convergence_from_galaxies = g0.surface_density_from_grid(grid_stack.unlensed_grid) + \
+                                                  g1.surface_density_from_grid(grid_stack.unlensed_grid)
+
+            # Our unit test will now assert these two values are the same, to a precision of 1.0e-4
+
+            assert effective_convergence == pytest.approx(effective_convergence_from_galaxies, 1.0e-4)
+
 
 class TestMultiTracerFixedSlices(object):
 
