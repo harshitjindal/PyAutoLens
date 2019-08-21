@@ -345,8 +345,8 @@ class EllipticalProfile(SphericalProfile):
         """
         return np.sqrt(
             np.add(
-                np.square(grid[:, 1]),
-                (np.square(grid[:, 0]) * np.square(self.axis_ratio)),
+                np.square(grid[:, 0]),
+                (np.square(grid[:, 1]) * np.square(self.axis_ratio)),
             )
         )
 
