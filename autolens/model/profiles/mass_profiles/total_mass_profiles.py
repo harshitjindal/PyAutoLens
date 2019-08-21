@@ -1,4 +1,3 @@
-import inspect
 from scipy import special
 from pyquad import quad_grid
 
@@ -7,12 +6,12 @@ from astropy import cosmology as cosmo
 
 import autofit as af
 from autolens import dimensions as dim
-from autolens.data.array import grids
+from autolens.array import grids
 from autolens.model.profiles import geometry_profiles
 
 from autolens.model.profiles import mass_profiles as mp
 
-from autolens.data.array.grids import reshape_returned_array, reshape_returned_grid
+from autolens.array.grids import reshape_array_from_grid, reshape_returned_grid
 
 
 class PointMass(geometry_profiles.SphericalProfile, mp.MassProfile):
@@ -91,7 +90,7 @@ class EllipticalCoredPowerLaw(mp.EllipticalMassProfile, mp.MassProfile):
             self.slope - 1
         )
 
-    @reshape_returned_array
+    @reshape_array_from_grid
     @geometry_profiles.transform_grid
     @geometry_profiles.move_grid_to_radial_minimum
     def convergence_from_grid(self, grid, return_in_2d=True, return_binned=True):
@@ -121,7 +120,7 @@ class EllipticalCoredPowerLaw(mp.EllipticalMassProfile, mp.MassProfile):
 
         return covnergence_grid
 
-    @reshape_returned_array
+    @reshape_array_from_grid
     @geometry_profiles.transform_grid
     @geometry_profiles.move_grid_to_radial_minimum
     def potential_from_grid(self, grid, return_in_2d=True, return_binned=True):
@@ -654,7 +653,7 @@ class SphericalIsothermal(EllipticalIsothermal):
             centre=centre, axis_ratio=1.0, phi=0.0, einstein_radius=einstein_radius
         )
 
-    @reshape_returned_array
+    @reshape_array_from_grid
     @geometry_profiles.transform_grid
     @geometry_profiles.move_grid_to_radial_minimum
     def potential_from_grid(self, grid, return_in_2d=True, return_binned=True):
@@ -731,7 +730,7 @@ class EllipticalIsothermalKormann(mp.EllipticalMassProfile, mp.MassProfile):
         )
         self.einstein_radius = einstein_radius
 
-    @reshape_returned_array
+    @reshape_array_from_grid
     @geometry_profiles.transform_grid
     @geometry_profiles.move_grid_to_radial_minimum
     def convergence_from_grid(self, grid, return_in_2d=True, return_binned=True):
@@ -754,14 +753,14 @@ class EllipticalIsothermalKormann(mp.EllipticalMassProfile, mp.MassProfile):
 
         covnergence_grid = np.zeros(grid.shape[0])
 
-        grid_eta = self.grid_to_elliptical_radii_Kormann(grid=grid)
+        grid_eta = self.grid_to_elliptical_radii(grid=grid)
 
         for i in range(grid.shape[0]):
             covnergence_grid[i] = self.convergence_func(r=grid_eta[i])
 
         return covnergence_grid
 
-    @reshape_returned_array
+    @reshape_array_from_grid
     @geometry_profiles.transform_grid
     @geometry_profiles.move_grid_to_radial_minimum
     def potential_from_grid(self, grid, return_in_2d=True, return_binned=True):
@@ -831,13 +830,12 @@ class EllipticalIsothermalKormann(mp.EllipticalMassProfile, mp.MassProfile):
 
     def convergence_func(self, r):
         return (
-            self.einstein_radius * np.sqrt(self.axis_ratio) / (2 * r)
+            self.einstein_radius * np.sqrt(self.axis_ratio) / (2 * self.axis_ratio * r)
         )
 
     @property
     def ellipticity_rescale(self):
-        return 1-((1-self.axis_ratio)/2)
-
+        return 1.0 / (self.axis_ratio ** 0.5)
 
     @dim.convert_units_to_input_units
     def summarize_in_units(

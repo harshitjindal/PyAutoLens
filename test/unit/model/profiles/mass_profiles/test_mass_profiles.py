@@ -5,9 +5,8 @@ import pytest
 
 import autofit as af
 from autolens import dimensions as dim
-from autolens.data.array import grids
+from autolens.array import grids
 from autolens.model.profiles import mass_profiles as mp
-from autolens.data.array.util import grid_util
 
 from test.unit.mock.model import mock_cosmology
 
@@ -819,116 +818,6 @@ class TestDeflectionsViaPotential(object):
         assert pixel_10000_reg_grid == pytest.approx(pixel_10000_from_av_sub_grid, 1e-4)
 
 
-class TestConvergenceViajacobian(object):
-    def test__compare_sis_convergence_via_jacobian_and_calculation(self):
-
-        sis = mp.SphericalIsothermal(centre=(0.0, 0.0), einstein_radius=2.0)
-
-        grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
-            shape=(20, 20), pixel_scale=0.05
-        )
-
-        convergence_via_calculation = sis.convergence_from_grid(
-            grid=grid, return_in_2d=True, return_binned=True
-        )
-
-        convergence_via_jacobian = sis.convergence_from_jacobian(
-            grid=grid, return_in_2d=True, return_binned=True
-        )
-
-        mean_error = np.mean(convergence_via_jacobian - convergence_via_calculation)
-
-        assert convergence_via_jacobian.shape == (20, 20)
-        assert mean_error < 1e-1
-
-        convergence_via_calculation = sis.convergence_from_grid(
-            grid=grid, return_in_2d=False, return_binned=True
-        )
-
-        convergence_via_jacobian = sis.convergence_from_jacobian(
-            grid=grid, return_in_2d=False, return_binned=True
-        )
-
-        mean_error = np.mean(convergence_via_jacobian - convergence_via_calculation)
-
-        assert convergence_via_jacobian.shape == (400,)
-        assert mean_error < 1e-1
-
-    def test__compare_sie_at_phi_45__convergence_via_jacobian_and_calculation(self):
-
-        sie = mp.EllipticalIsothermal(
-            centre=(0.0, 0.0), phi=45.0, axis_ratio=0.8, einstein_radius=2.0
-        )
-
-        grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
-            shape=(20, 20), pixel_scale=0.05
-        )
-
-        convergence_via_calculation = sie.convergence_from_grid(
-            grid=grid, return_in_2d=True, return_binned=True
-        )
-
-        convergence_via_jacobian = sie.convergence_from_jacobian(
-            grid=grid, return_in_2d=True, return_binned=True
-        )
-
-        mean_error = np.mean(convergence_via_jacobian - convergence_via_calculation)
-
-        assert mean_error < 1e-1
-
-    def test__convergence(self):
-
-        sie = mp.EllipticalIsothermal(
-            centre=(0.0, 0.0), phi=0.0, axis_ratio=0.8, einstein_radius=2.0
-        )
-
-        grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
-            shape=(20, 20), pixel_scale=0.05, sub_grid_size=2
-        )
-
-        convergence_binned_reg_grid = sie.convergence_from_jacobian(
-            grid=grid, return_in_2d=False, return_binned=True
-        )
-
-        convergence_sub_grid = sie.convergence_from_jacobian(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        pixel_1_reg_grid = convergence_binned_reg_grid[0]
-        pixel_1_from_av_sub_grid = (
-            convergence_sub_grid[0]
-            + convergence_sub_grid[1]
-            + convergence_sub_grid[2]
-            + convergence_sub_grid[3]
-        ) / 4
-
-        assert pixel_1_reg_grid == pytest.approx(pixel_1_from_av_sub_grid, 1e-4)
-
-        pixel_10000_reg_grid = convergence_binned_reg_grid[99]
-
-        pixel_10000_from_av_sub_grid = (
-            convergence_sub_grid[399]
-            + convergence_sub_grid[398]
-            + convergence_sub_grid[397]
-            + convergence_sub_grid[396]
-        ) / 4
-
-        assert pixel_10000_reg_grid == pytest.approx(pixel_10000_from_av_sub_grid, 1e-4)
-
-        convergence_via_calculation = sie.convergence_from_grid(
-            grid=grid, return_in_2d=False, return_binned=True
-        )
-
-        convergence_via_jacobian = sie.convergence_from_jacobian(
-            grid=grid, return_in_2d=False, return_binned=True
-        )
-
-        mean_error = np.mean(convergence_via_jacobian - convergence_via_calculation)
-
-        assert convergence_via_jacobian.shape == (400,)
-        assert mean_error < 1e-1
-
-
 class TestJacobianandMagnification(object):
     def test__jacobian_components(self):
 
@@ -978,11 +867,11 @@ class TestJacobianandMagnification(object):
             grid=grid, return_in_2d=True
         )
 
-        tangential_eigen_value = sie.tangential_eigen_value_from_shear_and_convergence(
+        tangential_eigen_value = sie.tangential_eigen_value_from_grid(
             grid=grid, return_in_2d=True
         )
 
-        radal_eigen_value = sie.radial_eigen_value_from_shear_and_convergence(
+        radal_eigen_value = sie.radial_eigen_value_from_grid(
             grid=grid, return_in_2d=True
         )
 
@@ -1008,11 +897,11 @@ class TestJacobianandMagnification(object):
             grid=grid, return_in_2d=True, return_binned=False
         )
 
-        tangential_eigen_value = sie.tangential_eigen_value_from_shear_and_convergence(
+        tangential_eigen_value = sie.tangential_eigen_value_from_grid(
             grid=grid, return_in_2d=True, return_binned=False
         )
 
-        radal_eigen_value = sie.radial_eigen_value_from_shear_and_convergence(
+        radal_eigen_value = sie.radial_eigen_value_from_grid(
             grid=grid, return_in_2d=True, return_binned=False
         )
 
@@ -1042,9 +931,11 @@ class TestJacobianandMagnification(object):
             grid=grid, return_in_2d=True
         )
 
-        convergence = sie.convergence_from_jacobian(grid=grid, return_in_2d=True)
+        convergence = sie.convergence_via_jacobian_from_grid(
+            grid=grid, return_in_2d=True
+        )
 
-        shear = sie.shear_from_jacobian(grid=grid, return_in_2d=True)
+        shear = sie.shear_via_jacobian_from_grid(grid=grid, return_in_2d=True)
 
         magnification_via_convergence_and_shear = 1 / (
             (1 - convergence) ** 2 - shear ** 2
@@ -1064,11 +955,11 @@ class TestJacobianandMagnification(object):
             grid=grid, return_in_2d=True, return_binned=False
         )
 
-        convergence = sie.convergence_from_jacobian(
+        convergence = sie.convergence_via_jacobian_from_grid(
             grid=grid, return_in_2d=True, return_binned=False
         )
 
-        shear = sie.shear_from_jacobian(
+        shear = sie.shear_via_jacobian_from_grid(
             grid=grid, return_in_2d=True, return_binned=False
         )
 
@@ -1132,11 +1023,11 @@ class TestJacobianandMagnification(object):
             shape=(10, 10), pixel_scale=0.05, sub_grid_size=2
         )
 
-        shear_binned_reg_grid = sie.shear_from_jacobian(
+        shear_binned_reg_grid = sie.shear_via_jacobian_from_grid(
             grid=grid, return_in_2d=False, return_binned=True
         )
 
-        shear_sub_grid = sie.shear_from_jacobian(
+        shear_sub_grid = sie.shear_via_jacobian_from_grid(
             grid=grid, return_in_2d=False, return_binned=False
         )
 
@@ -1171,11 +1062,11 @@ class TestJacobianandMagnification(object):
             shape=(10, 10), pixel_scale=0.05, sub_grid_size=2
         )
 
-        lambda_t_binned_reg_grid = sie.tangential_eigen_value_from_shear_and_convergence(
+        lambda_t_binned_reg_grid = sie.tangential_eigen_value_from_grid(
             grid=grid, return_in_2d=False, return_binned=True
         )
 
-        lambda_t_sub_grid = sie.tangential_eigen_value_from_shear_and_convergence(
+        lambda_t_sub_grid = sie.tangential_eigen_value_from_grid(
             grid=grid, return_in_2d=False, return_binned=False
         )
 
@@ -1210,11 +1101,11 @@ class TestJacobianandMagnification(object):
             shape=(100, 100), pixel_scale=0.05, sub_grid_size=2
         )
 
-        lambda_r_binned_reg_grid = sie.radial_eigen_value_from_shear_and_convergence(
+        lambda_r_binned_reg_grid = sie.radial_eigen_value_from_grid(
             grid=grid, return_in_2d=False, return_binned=True
         )
 
-        lambda_r_sub_grid = sie.radial_eigen_value_from_shear_and_convergence(
+        lambda_r_sub_grid = sie.radial_eigen_value_from_grid(
             grid=grid, return_in_2d=False, return_binned=False
         )
 
@@ -1260,7 +1151,8 @@ def critical_curve_via_magnification_from_mass_profile_and_grid(mass_profile, gr
         pixel_coord = np.stack((contour_x, contour_y), axis=-1)
 
         critical_curve = grid.marching_squares_grid_pixels_to_grid_arcsec(
-            grid_pixels=pixel_coord, shape=magnification_2d.shape)
+            grid_pixels=pixel_coord, shape=magnification_2d.shape
+        )
 
         critical_curves.append(critical_curve)
 
@@ -1290,8 +1182,117 @@ def caustics_via_magnification_from_mass_profile_and_grid(mass_profile, grid):
     return caustics
 
 
-class TestCriticalCurvesandCaustics(object):
+class TestConvergenceViajacobian(object):
+    def test__compare_sis_convergence_via_jacobian_and_calculation(self):
 
+        sis = mp.SphericalIsothermal(centre=(0.0, 0.0), einstein_radius=2.0)
+
+        grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+            shape=(20, 20), pixel_scale=0.05
+        )
+
+        convergence_via_calculation = sis.convergence_from_grid(
+            grid=grid, return_in_2d=True, return_binned=True
+        )
+
+        convergence_via_jacobian = sis.convergence_via_jacobian_from_grid(
+            grid=grid, return_in_2d=True, return_binned=True
+        )
+
+        mean_error = np.mean(convergence_via_jacobian - convergence_via_calculation)
+
+        assert convergence_via_jacobian.shape == (20, 20)
+        assert mean_error < 1e-1
+
+        convergence_via_calculation = sis.convergence_from_grid(
+            grid=grid, return_in_2d=False, return_binned=True
+        )
+
+        convergence_via_jacobian = sis.convergence_via_jacobian_from_grid(
+            grid=grid, return_in_2d=False, return_binned=True
+        )
+
+        mean_error = np.mean(convergence_via_jacobian - convergence_via_calculation)
+
+        assert convergence_via_jacobian.shape == (400,)
+        assert mean_error < 1e-1
+
+    def test__compare_sie_at_phi_45__convergence_via_jacobian_and_calculation(self):
+
+        sie = mp.EllipticalIsothermal(
+            centre=(0.0, 0.0), phi=45.0, axis_ratio=0.8, einstein_radius=2.0
+        )
+
+        grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+            shape=(20, 20), pixel_scale=0.05
+        )
+
+        convergence_via_calculation = sie.convergence_from_grid(
+            grid=grid, return_in_2d=True, return_binned=True
+        )
+
+        convergence_via_jacobian = sie.convergence_via_jacobian_from_grid(
+            grid=grid, return_in_2d=True, return_binned=True
+        )
+
+        mean_error = np.mean(convergence_via_jacobian - convergence_via_calculation)
+
+        assert mean_error < 1e-1
+
+    def test__convergence(self):
+
+        sie = mp.EllipticalIsothermal(
+            centre=(0.0, 0.0), phi=0.0, axis_ratio=0.8, einstein_radius=2.0
+        )
+
+        grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+            shape=(20, 20), pixel_scale=0.05, sub_grid_size=2
+        )
+
+        convergence_binned_reg_grid = sie.convergence_via_jacobian_from_grid(
+            grid=grid, return_in_2d=False, return_binned=True
+        )
+
+        convergence_sub_grid = sie.convergence_via_jacobian_from_grid(
+            grid=grid, return_in_2d=False, return_binned=False
+        )
+
+        pixel_1_reg_grid = convergence_binned_reg_grid[0]
+        pixel_1_from_av_sub_grid = (
+            convergence_sub_grid[0]
+            + convergence_sub_grid[1]
+            + convergence_sub_grid[2]
+            + convergence_sub_grid[3]
+        ) / 4
+
+        assert pixel_1_reg_grid == pytest.approx(pixel_1_from_av_sub_grid, 1e-4)
+
+        pixel_10000_reg_grid = convergence_binned_reg_grid[99]
+
+        pixel_10000_from_av_sub_grid = (
+            convergence_sub_grid[399]
+            + convergence_sub_grid[398]
+            + convergence_sub_grid[397]
+            + convergence_sub_grid[396]
+        ) / 4
+
+        assert pixel_10000_reg_grid == pytest.approx(pixel_10000_from_av_sub_grid, 1e-4)
+
+        convergence_via_calculation = sie.convergence_from_grid(
+            grid=grid, return_in_2d=False, return_binned=True
+        )
+
+        convergence_via_jacobian = sie.convergence_via_jacobian_from_grid(
+            grid=grid, return_in_2d=False, return_binned=True
+        )
+
+        mean_error = np.mean(convergence_via_jacobian - convergence_via_calculation)
+
+        assert convergence_via_jacobian.shape == (400,)
+        assert mean_error < 1e-1
+
+
+class TestCriticalCurvesandCaustics(object):
     def test_compare_magnification_from_determinant_and_from_convergence_and_shear(
         self
     ):
@@ -1306,9 +1307,9 @@ class TestCriticalCurvesandCaustics(object):
 
         magnification_via_determinant = sie.magnification_from_grid(grid=grid)
 
-        convergence = sie.convergence_from_jacobian(grid=grid)
+        convergence = sie.convergence_via_jacobian_from_grid(grid=grid)
 
-        shear = sie.shear_from_jacobian(grid=grid)
+        shear = sie.shear_via_jacobian_from_grid(grid=grid)
 
         magnification_via_convergence_and_shear = 1 / (
             (1 - convergence) ** 2 - shear ** 2
@@ -1337,9 +1338,9 @@ class TestCriticalCurvesandCaustics(object):
             tangential_critical_curve[:, 0],
         )
 
-        assert np.mean(x_critical_tangential ** 2 + y_critical_tangential ** 2) == pytest.approx(
-            sis.einstein_radius ** 2, 5e-1
-        )
+        assert np.mean(
+            x_critical_tangential ** 2 + y_critical_tangential ** 2
+        ) == pytest.approx(sis.einstein_radius ** 2, 5e-1)
 
         sis = mp.SphericalIsothermal(centre=(0.0, 0.0), einstein_radius=2.0)
 
@@ -1356,9 +1357,9 @@ class TestCriticalCurvesandCaustics(object):
             tangential_critical_curve[:, 0],
         )
 
-        assert np.mean(x_critical_tangential ** 2 + y_critical_tangential ** 2) == pytest.approx(
-            sis.einstein_radius ** 2, 5e-1
-        )
+        assert np.mean(
+            x_critical_tangential ** 2 + y_critical_tangential ** 2
+        ) == pytest.approx(sis.einstein_radius ** 2, 5e-1)
 
     def test__tangential_critical_curve_centres__spherical_isothermal(self):
 
@@ -1372,8 +1373,8 @@ class TestCriticalCurvesandCaustics(object):
 
         tangential_critical_curve = critical_curves[0]
 
-        y_centre = np.mean(tangential_critical_curve[:,0])
-        x_centre = np.mean(tangential_critical_curve[:,1])
+        y_centre = np.mean(tangential_critical_curve[:, 0])
+        x_centre = np.mean(tangential_critical_curve[:, 1])
 
         assert -0.03 < y_centre < 0.03
         assert -0.03 < x_centre < 0.03
@@ -1386,8 +1387,8 @@ class TestCriticalCurvesandCaustics(object):
 
         tangential_critical_curve = critical_curves[0]
 
-        y_centre = np.mean(tangential_critical_curve[:,0])
-        x_centre = np.mean(tangential_critical_curve[:,1])
+        y_centre = np.mean(tangential_critical_curve[:, 0])
+        x_centre = np.mean(tangential_critical_curve[:, 1])
 
         assert -0.01 < y_centre < 0.01
         assert -0.01 < x_centre < 0.01
@@ -1402,8 +1403,8 @@ class TestCriticalCurvesandCaustics(object):
 
         tangential_critical_curve = critical_curves[0]
 
-        y_centre = np.mean(tangential_critical_curve[:,0])
-        x_centre = np.mean(tangential_critical_curve[:,1])
+        y_centre = np.mean(tangential_critical_curve[:, 0])
+        x_centre = np.mean(tangential_critical_curve[:, 1])
 
         assert 0.47 < y_centre < 0.53
         assert 0.97 < x_centre < 1.03
@@ -1420,8 +1421,8 @@ class TestCriticalCurvesandCaustics(object):
 
         radial_critical_curve = critical_curves[1]
 
-        y_centre = np.mean(radial_critical_curve[:,0])
-        x_centre = np.mean(radial_critical_curve[:,1])
+        y_centre = np.mean(radial_critical_curve[:, 0])
+        x_centre = np.mean(radial_critical_curve[:, 1])
 
         assert -0.05 < y_centre < 0.05
         assert -0.05 < x_centre < 0.05
@@ -1434,8 +1435,8 @@ class TestCriticalCurvesandCaustics(object):
 
         radial_critical_curve = critical_curves[1]
 
-        y_centre = np.mean(radial_critical_curve[:,0])
-        x_centre = np.mean(radial_critical_curve[:,1])
+        y_centre = np.mean(radial_critical_curve[:, 0])
+        x_centre = np.mean(radial_critical_curve[:, 1])
 
         assert -0.01 < y_centre < 0.01
         assert -0.01 < x_centre < 0.01
@@ -1450,8 +1451,8 @@ class TestCriticalCurvesandCaustics(object):
 
         radial_critical_curve = critical_curves[1]
 
-        y_centre = np.mean(radial_critical_curve[:,0])
-        x_centre = np.mean(radial_critical_curve[:,1])
+        y_centre = np.mean(radial_critical_curve[:, 0])
+        x_centre = np.mean(radial_critical_curve[:, 1])
 
         assert 0.45 < y_centre < 0.55
         assert 0.95 < x_centre < 1.05
@@ -1468,8 +1469,8 @@ class TestCriticalCurvesandCaustics(object):
 
         tangential_caustic = caustics[0]
 
-        y_centre = np.mean(tangential_caustic[:,0])
-        x_centre = np.mean(tangential_caustic[:,1])
+        y_centre = np.mean(tangential_caustic[:, 0])
+        x_centre = np.mean(tangential_caustic[:, 1])
 
         assert -0.03 < y_centre < 0.03
         assert -0.03 < x_centre < 0.03
@@ -1482,8 +1483,8 @@ class TestCriticalCurvesandCaustics(object):
 
         tangential_caustic = caustics[0]
 
-        y_centre = np.mean(tangential_caustic[:,0])
-        x_centre = np.mean(tangential_caustic[:,1])
+        y_centre = np.mean(tangential_caustic[:, 0])
+        x_centre = np.mean(tangential_caustic[:, 1])
 
         assert -0.01 < y_centre < 0.01
         assert -0.01 < x_centre < 0.01
@@ -1498,8 +1499,8 @@ class TestCriticalCurvesandCaustics(object):
 
         tangential_caustic = caustics[0]
 
-        y_centre = np.mean(tangential_caustic[:,0])
-        x_centre = np.mean(tangential_caustic[:,1])
+        y_centre = np.mean(tangential_caustic[:, 0])
+        x_centre = np.mean(tangential_caustic[:, 1])
 
         assert 0.47 < y_centre < 0.53
         assert 0.97 < x_centre < 1.03
@@ -1537,8 +1538,8 @@ class TestCriticalCurvesandCaustics(object):
 
         radial_caustic = caustics[1]
 
-        y_centre = np.mean(radial_caustic[:,0])
-        x_centre = np.mean(radial_caustic[:,1])
+        y_centre = np.mean(radial_caustic[:, 0])
+        x_centre = np.mean(radial_caustic[:, 1])
 
         assert -0.2 < y_centre < 0.2
         assert -0.2 < x_centre < 0.2
@@ -1551,8 +1552,8 @@ class TestCriticalCurvesandCaustics(object):
 
         radial_caustic = caustics[1]
 
-        y_centre = np.mean(radial_caustic[:,0])
-        x_centre = np.mean(radial_caustic[:,1])
+        y_centre = np.mean(radial_caustic[:, 0])
+        x_centre = np.mean(radial_caustic[:, 1])
 
         assert -0.09 < y_centre < 0.09
         assert -0.09 < x_centre < 0.09
@@ -1567,8 +1568,8 @@ class TestCriticalCurvesandCaustics(object):
 
         radial_caustic = caustics[1]
 
-        y_centre = np.mean(radial_caustic[:,0])
-        x_centre = np.mean(radial_caustic[:,1])
+        y_centre = np.mean(radial_caustic[:, 0])
+        x_centre = np.mean(radial_caustic[:, 1])
 
         assert 0.3 < y_centre < 0.7
         assert 0.8 < x_centre < 1.2
@@ -1677,7 +1678,9 @@ class TestCriticalCurvesandCaustics(object):
             sum(tangential_caustic_from_magnification), 5e-1
         )
 
-    def test__compare_radial_caustic_from_magnification_and_lambda_r__regular_grid(self):
+    def test__compare_radial_caustic_from_magnification_and_lambda_r__regular_grid(
+        self
+    ):
 
         sie = mp.EllipticalIsothermal(
             centre=(0.0, 0.0), einstein_radius=2, axis_ratio=0.8, phi=40

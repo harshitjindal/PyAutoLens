@@ -1,6 +1,6 @@
 from autolens.data.instrument import abstract_data
 from autolens.data.instrument import ccd
-from autolens.data.array import mask as msk
+from autolens.array import mask as msk
 from autolens.model.profiles import light_profiles as lp
 from autolens.model.galaxy import galaxy as g
 from autolens.lens import ray_tracing
@@ -16,7 +16,7 @@ from test.simulation import simulation_util
 
 # Lets quickly remind ourselves of the image, and the 3.0" circular mask we'll use to mask it.
 ccd_data = simulation_util.load_test_ccd_data(
-    data_type="lens_only_dev_vaucouleurs", data_resolution="LSST"
+    data_type="lens_light_dev_vaucouleurs", data_resolution="LSST"
 )
 mask = msk.Mask.circular(
     shape=ccd_data.shape, pixel_scale=ccd_data.pixel_scale, radius_arcsec=3.0
@@ -32,8 +32,8 @@ lens_galaxy = g.Galaxy(
 
 lens_data = ld.LensData(ccd_data=ccd_data, mask=mask)
 
-tracer = ray_tracing.Tracer.from_galaxies_and_image_plane_grid_stack(
-    galaxies=[lens_galaxy], image_plane_grid_stack=lens_data.grid_stack
+tracer = ray_tracing.Tracer.from_galaxies(
+    galaxies=[lens_galaxy], image_plane_grid_stack=lens_data.grid
 )
 fit = lens_fit.LensDataFit.for_data_and_tracer(lens_data=lens_data, tracer=tracer)
 lens_fit_plotters.plot_fit_subplot(
