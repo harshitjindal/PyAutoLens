@@ -10,7 +10,7 @@ from autolens.lens.plotters import lens_fit_plotters
 from test.simulation import simulation_util
 
 # In this tutorial, we'll introduce a new pixelization, called an adaptive-pixelization. This pixelization doesn't use
-# uniform grid of rectangular pixels, but instead uses irregular 'Voronoi' pixels. So, why would we want to do that?
+# uniform grid of rectangular pixels, but instead uses ir'Voronoi' pixels. So, why would we want to do that?
 # Lets take another look at the rectangular grid, and think about its weakness.
 
 # Lets quickly remind ourselves of the image, and the 3.0" circular mask we'll use to mask it.
@@ -46,9 +46,7 @@ source_galaxy = g.Galaxy(
 
 lens_data = ld.LensData(ccd_data=ccd_data, mask=mask)
 
-tracer = ray_tracing.Tracer.from_galaxies(
-    galaxies=[lens_galaxy, source_galaxy], image_plane_grid_stack=lens_data.grid
-)
+tracer = ray_tracing.Tracer.from_galaxies(galaxies=[lens_galaxy, source_galaxy])
 fit = lens_fit.LensDataFit.for_data_and_tracer(lens_data=lens_data, tracer=tracer)
 
 

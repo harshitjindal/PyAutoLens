@@ -23,10 +23,10 @@ class LensData(object):
         preload_pixelization_grids_of_planes=None,
     ):
         """
-        The lens instrument is the collection of instrument (image, noise-map, PSF), a mask, grid_stack, convolver \
+        The lens data is the collection of instrument (image, noise-map, PSF), a mask, grid, convolver \
         and other utilities that are used for modeling and fitting an image of a strong lens.
 
-        Whilst the image, noise-map, etc. are loaded in 2D, the lens instrument creates reduced 1D arrays of each \
+        Whilst the image, noise-map, etc. are loaded in 2D, the lens data creates reduced 1D arrays of each \
         for lensing calculations.
 
         Parameters
@@ -36,7 +36,7 @@ class LensData(object):
         mask: msk.Mask
             The 2D mask that is applied to the image.
         sub_grid_size : int
-            The size of the sub-grid used for each lens SubGrid. E.g. a value of 2 grid_stack each image-pixel on a 2x2 \
+            The size of the sub-grid used for each lens SubGrid. E.g. a value of 2 grid each image-pixel on a 2x2 \
             sub-grid.
         trimmed_psf_shape : (int, int)
             The shape of the PSF used for convolving model image generated using analytic light profiles. A smaller \
@@ -49,7 +49,7 @@ class LensData(object):
             used to speed up the non-linear sampling.
         pixel_scale_interpolation_grid : float
             If *True*, expensive to compute mass profile deflection angles will be computed on a sparse grid and \
-            interpolated to the regular, sub and blurring grids.
+            interpolated to the grid, sub and blurring grids.
         inversion_pixel_limit : int or None
             The maximum number of pixels that can be used by an inversion, with the limit placed primarily to speed \
             up run.
@@ -98,7 +98,9 @@ class LensData(object):
         self.pixel_scale_binned_grid = pixel_scale_binned_grid
 
         if pixel_scale_binned_grid is not None:
-            binned_grid = grids.BinnedGrid.from_mask_and_pixel_scale_binned_grid(mask=mask, pixel_scale_binned_grid=pixel_scale_binned_grid)
+            binned_grid = grids.BinnedGrid.from_mask_and_pixel_scale_binned_grid(
+                mask=mask, pixel_scale_binned_grid=pixel_scale_binned_grid
+            )
             self.grid.new_grid_with_binned_grid(binned_grid=binned_grid)
 
         self.pixel_scale_interpolation_grid = pixel_scale_interpolation_grid
@@ -112,7 +114,9 @@ class LensData(object):
         ### POSITIONS ###
 
         if positions is not None:
-            self.positions = list(map(lambda position_set: np.asarray(position_set), positions))
+            self.positions = list(
+                map(lambda position_set: np.asarray(position_set), positions)
+            )
         else:
             self.positions = positions
 
@@ -153,7 +157,7 @@ class LensData(object):
             inversion_pixel_limit=self.inversion_pixel_limit,
             inversion_uses_border=self.inversion_uses_border,
             hyper_noise_map_max=self.hyper_noise_map_max,
-            preload_pixelization_grids_of_planes=self.preload_pixelization_grids_of_planes
+            preload_pixelization_grids_of_planes=self.preload_pixelization_grids_of_planes,
         )
 
     def new_lens_data_with_binned_up_ccd_data_and_mask(self, bin_up_factor):
@@ -177,7 +181,7 @@ class LensData(object):
             inversion_pixel_limit=self.inversion_pixel_limit,
             inversion_uses_border=self.inversion_uses_border,
             hyper_noise_map_max=self.hyper_noise_map_max,
-            preload_pixelization_grids_of_planes=self.preload_pixelization_grids_of_planes
+            preload_pixelization_grids_of_planes=self.preload_pixelization_grids_of_planes,
         )
 
     def new_lens_data_with_signal_to_noise_limit(self, signal_to_noise_limit):
@@ -198,7 +202,7 @@ class LensData(object):
             inversion_pixel_limit=self.inversion_pixel_limit,
             inversion_uses_border=self.inversion_uses_border,
             hyper_noise_map_max=self.hyper_noise_map_max,
-            preload_pixelization_grids_of_planes=self.preload_pixelization_grids_of_planes
+            preload_pixelization_grids_of_planes=self.preload_pixelization_grids_of_planes,
         )
 
     def mask(self, return_in_2d=True):
@@ -245,4 +249,6 @@ class LensData(object):
             self.inversion_pixel_limit = obj.inversion_pixel_limit
             self.hyper_noise_map_max = obj.hyper_noise_map_max
             self.preload_blurring_grid = obj.preload_blurring_grid
-            self.preload_pixelization_grids_of_planes = obj.preload_pixelization_grids_of_planes
+            self.preload_pixelization_grids_of_planes = (
+                obj.preload_pixelization_grids_of_planes
+            )

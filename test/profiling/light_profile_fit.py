@@ -64,15 +64,13 @@ for data_resolution in ["LSST", "Euclid", "HST", "HST_Up", "AO"]:
     lens_data = ld.LensData(ccd_data=ccd_data, mask=mask, sub_grid_size=sub_grid_size)
 
     print("Light profile fit run times for image type " + data_resolution + "\n")
-    print("Number of points = " + str(lens_data.grid.sub.shape[0]) + "\n")
+    print("Number of points = " + str(lens_data.grid.shape[0]) + "\n")
 
     start_overall = time.time()
 
     start = time.time()
     for i in range(repeats):
-        tracer = ray_tracing.Tracer.from_galaxies(
-            galaxies=[lens_galaxy, source_galaxy], image_plane_grid_stack=lens_data.grid
-        )
+        tracer = ray_tracing.Tracer.from_galaxies(galaxies=[lens_galaxy, source_galaxy])
     diff = time.time() - start
     print("Time to Setup Tracer = {}".format(diff / repeats))
 

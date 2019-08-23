@@ -16,12 +16,12 @@ def sub_mask_1d_index_to_mask_1d_index_from_mask(mask, sub_grid_size):
 
     For example, for a sub-grid size of 2, the following mappings from sub-pixels to 2D array pixels are:
 
-    - sub_mask_1d_index_to_mask_1d_index[0] = 0 -> The first sub-pixel maps to the first unmasked pixel on the regular 2D array.
-    - sub_mask_1d_index_to_mask_1d_index[3] = 0 -> The fourth sub-pixel maps to the first unmasked pixel on the regular 2D array.
-    - sub_mask_1d_index_to_mask_1d_index[7] = 1 -> The eighth sub-pixel maps to the second unmasked pixel on the regular 2D array.
+    - sub_mask_1d_index_to_mask_1d_index[0] = 0 -> The first sub-pixel maps to the first unmasked pixel on the 2D array.
+    - sub_mask_1d_index_to_mask_1d_index[3] = 0 -> The fourth sub-pixel maps to the first unmasked pixel on the 2D array.
+    - sub_mask_1d_index_to_mask_1d_index[7] = 1 -> The eighth sub-pixel maps to the second unmasked pixel on the 2D array.
 
-    The term 'regular' is used because the regular-grid is defined as the grid of coordinates on the centre of every \
-    pixel on the 2D array. Thus, this array maps sub-pixels on a sub-grid to regular-pixels on a regular-grid.
+    The term 'grid' is used because the grid is defined as the grid of coordinates on the centre of every \
+    pixel on the 2D array. Thus, this array maps sub-pixels on a sub-grid to pixels on a grid.
 
 
                      [True, False, True]])
@@ -51,19 +51,18 @@ def sub_mask_1d_index_to_mask_1d_index_from_mask(mask, sub_grid_size):
     return sub_mask_1d_index_to_mask_1d_index
 
 
-# @decorator_util.jit()
 def mask_1d_index_to_sub_mask_1d_indexes_from_mask(mask, sub_grid_size):
     """"For pixels on a 2D array of shape (rows, colums), compute a 1D array which, for every unmasked pixel on \
     this 2D array, maps the 1D sub-pixel indexes to their 1D pixel indexes.
 
     For example, for a sub-grid size of 2, the following mappings from sub-pixels to 2D array pixels are:
 
-    - sub_mask_1d_index_to_mask_1d_index[0] = 0 -> The first sub-pixel maps to the first unmasked pixel on the regular 2D array.
-    - sub_mask_1d_index_to_mask_1d_index[3] = 0 -> The fourth sub-pixel maps to the first unmasked pixel on the regular 2D array.
-    - sub_mask_1d_index_to_mask_1d_index[7] = 1 -> The eighth sub-pixel maps to the second unmasked pixel on the regular 2D array.
+    - sub_mask_1d_index_to_mask_1d_index[0] = 0 -> The first sub-pixel maps to the first unmasked pixel on the 2D array.
+    - sub_mask_1d_index_to_mask_1d_index[3] = 0 -> The fourth sub-pixel maps to the first unmasked pixel on the 2D array.
+    - sub_mask_1d_index_to_mask_1d_index[7] = 1 -> The eighth sub-pixel maps to the second unmasked pixel on the 2D array.
 
-    The term 'regular' is used because the regular-grid is defined as the grid of coordinates on the centre of every \
-    pixel on the 2D array. Thus, this array maps sub-pixels on a sub-grid to regular-pixels on a regular-grid.
+    The term 'grid' is used because the grid is defined as the grid of coordinates on the centre of every \
+    pixel on the 2D array. Thus, this array maps sub-pixels on a sub-grid to pixels on a grid.
 
 
                      [True, False, True]])

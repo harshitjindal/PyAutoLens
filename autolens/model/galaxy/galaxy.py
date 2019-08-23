@@ -58,7 +58,7 @@ class Galaxy(af.ModelObject):
         pixelization : inversion.Pixelization
             The pixelization of the galaxy used to reconstruct an observed image using an inversion.
         regularization : inversion.Regularization
-            The regularization of the pixel-grid used to reconstruct an observed regular using an inversion.
+            The regularization of the pixel-grid used to reconstruct an observed using an inversion.
         """
         super().__init__()
         self.redshift = redshift
@@ -159,12 +159,12 @@ class Galaxy(af.ModelObject):
 
     @reshape_array_from_grid
     def profile_image_from_grid(self, grid, return_in_2d=True, return_binned=True):
-        """Calculate the summed intensities of all of the galaxy's light profiles using a grid of Cartesian (y,x) \
+        """Calculate the summed image of all of the galaxy's light profiles using a grid of Cartesian (y,x) \
         coordinates.
         
         If the galaxy has no light profiles, a grid of zeros is returned.
         
-        See *profiles.light_profiles* for a description of how light profile intensities are computed.
+        See *profiles.light_profiles* for a description of how light profile image are computed.
 
         Parameters
         ----------
@@ -173,7 +173,7 @@ class Galaxy(af.ModelObject):
         return_in_2d : bool
             If *True*, the returned array is mapped to its unmasked 2D shape, if *False* it is the masked 1D shape.
         return_binned : bool
-            If *True*, the returned array which is computed on a sub-grid is binned up to the regular grid dimensions \
+            If *True*, the returned array which is computed on a sub-grid is binned up to the grid dimensions \
             by taking the mean of all sub-gridded values. If *False*, the array is returned on the dimensions of the \
             sub-grid.
         """
@@ -287,7 +287,7 @@ class Galaxy(af.ModelObject):
         return_in_2d : bool
             If *True*, the returned array is mapped to its unmasked 2D shape, if *False* it is the masked 1D shape.
         return_binned : bool
-            If *True*, the returned array which is computed on a sub-grid is binned up to the regular grid dimensions \
+            If *True*, the returned array which is computed on a sub-grid is binned up to the grid dimensions \
             by taking the mean of all sub-gridded values. If *False*, the array is returned on the dimensions of the \
             sub-grid.
         """
@@ -321,7 +321,7 @@ class Galaxy(af.ModelObject):
         return_in_2d : bool
             If *True*, the returned array is mapped to its unmasked 2D shape, if *False* it is the masked 1D shape.
         return_binned : bool
-            If *True*, the returned array which is computed on a sub-grid is binned up to the regular grid dimensions \
+            If *True*, the returned array which is computed on a sub-grid is binned up to the grid dimensions \
             by taking the mean of all sub-gridded values. If *False*, the array is returned on the dimensions of the \
             sub-grid.
         """

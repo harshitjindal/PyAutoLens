@@ -75,8 +75,7 @@ def test__plot_ray_tracing_for_phase__dependent_on_input(
 
     assert phase_plotter_path + "tracer.png" in plot_patch.paths
     assert (
-        phase_plotter_path + "ray_tracing/tracer_profile_image.png"
-        in plot_patch.paths
+        phase_plotter_path + "ray_tracing/tracer_profile_image.png" in plot_patch.paths
     )
     assert (
         phase_plotter_path + "ray_tracing/tracer_source_plane.png" in plot_patch.paths
@@ -172,14 +171,14 @@ def test__lens_fit_for_phase__source_and_lens__depedent_on_input(
 
 
 def test__hyper_images_for_phase__source_and_lens__depedent_on_input(
-    hyper_model_image_7x7, cluster_grid_7x7, mask_7x7, phase_plotter_path, plot_patch
+    hyper_model_image_7x7, binned_grid_7x7, mask_7x7, phase_plotter_path, plot_patch
 ):
     phase_plotters.plot_hyper_images_for_phase(
         hyper_model_image_2d=hyper_model_image_7x7,
         hyper_galaxy_image_2d_path_dict=None,
         binned_hyper_galaxy_image_2d_path_dict=None,
         mask=mask_7x7,
-        binned_grid=cluster_grid_7x7,
+        binned_grid=binned_grid_7x7,
         extract_array_from_mask=True,
         zoom_around_mask=True,
         units="arcsec",

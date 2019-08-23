@@ -584,8 +584,12 @@ class TestAbstractPlaneLensing(object):
             lp0 = g0.light_profiles[0]
             lp1 = g1.light_profiles[0]
 
-            lp0_sub_image = lp0.profile_image_from_grid(grid=sub_grid_7x7)
-            lp1_sub_image = lp1.profile_image_from_grid(grid=sub_grid_7x7)
+            lp0_sub_image = lp0.profile_image_from_grid(
+                grid=sub_grid_7x7, return_in_2d=False, return_binned=False
+            )
+            lp1_sub_image = lp1.profile_image_from_grid(
+                grid=sub_grid_7x7, return_in_2d=False, return_binned=False
+            )
 
             # Perform sub gridding average manually
             lp0_image_pixel_0 = (
@@ -663,7 +667,7 @@ class TestAbstractPlaneLensing(object):
 
             assert profile_image == pytest.approx(g0_image + g1_image, 1.0e-4)
 
-        def test__plane_has_no_galaxies__image_is_zeros_size_of_unlensed_regular_grid(
+        def test__plane_has_no_galaxies__image_is_zeros_size_of_unlensed_grid(
             self, sub_grid_7x7
         ):
 
@@ -703,8 +707,12 @@ class TestAbstractPlaneLensing(object):
             mp0 = g0.mass_profiles[0]
             mp1 = g1.mass_profiles[0]
 
-            mp0_sub_convergence = mp0.convergence_from_grid(grid=sub_grid_7x7)
-            mp1_sub_convergence = mp1.convergence_from_grid(grid=sub_grid_7x7)
+            mp0_sub_convergence = mp0.convergence_from_grid(
+                grid=sub_grid_7x7, return_in_2d=False, return_binned=False
+            )
+            mp1_sub_convergence = mp1.convergence_from_grid(
+                grid=sub_grid_7x7, return_in_2d=False, return_binned=False
+            )
 
             mp_sub_convergence = mp0_sub_convergence + mp1_sub_convergence
 
@@ -759,7 +767,7 @@ class TestAbstractPlaneLensing(object):
 
             assert convergence == pytest.approx(g0_convergence + g1_convergence, 1.0e-8)
 
-        def test__plane_has_no_galaxies__convergence_is_zeros_size_of_reshaped_sub_grid_array(
+        def test__plane_has_no_galaxies__convergence_is_zeros_size_of_reshaped_sub_array(
             self, sub_grid_7x7
         ):
 
@@ -808,8 +816,12 @@ class TestAbstractPlaneLensing(object):
             mp0 = g0.mass_profiles[0]
             mp1 = g1.mass_profiles[0]
 
-            mp0_sub_potential = mp0.potential_from_grid(grid=sub_grid_7x7)
-            mp1_sub_potential = mp1.potential_from_grid(grid=sub_grid_7x7)
+            mp0_sub_potential = mp0.potential_from_grid(
+                grid=sub_grid_7x7, return_in_2d=False, return_binned=False
+            )
+            mp1_sub_potential = mp1.potential_from_grid(
+                grid=sub_grid_7x7, return_in_2d=False, return_binned=False
+            )
 
             mp_sub_potential = mp0_sub_potential + mp1_sub_potential
 
@@ -863,7 +875,7 @@ class TestAbstractPlaneLensing(object):
 
             assert potential == pytest.approx(g0_potential + g1_potential, 1.0e-8)
 
-        def test__plane_has_no_galaxies__potential_is_zeros_size_of_reshaped_sub_grid_array(
+        def test__plane_has_no_galaxies__potential_is_zeros_size_of_reshaped_sub_array(
             self, sub_grid_7x7
         ):
             plane = pl.Plane(galaxies=[], redshift=0.5)
@@ -1030,7 +1042,7 @@ class TestAbstractPlaneLensing(object):
                 np.array([[2.0 * 0.707, -2.0 * 0.707], [2.0, 0.0]]), 1e-3
             )
 
-        def test__plane_has_no_galaxies__deflections_are_zeros_size_of_unlensed_regular_grid(
+        def test__plane_has_no_galaxies__deflections_are_zeros_size_of_unlensed_grid(
             self, sub_grid_7x7
         ):
 
@@ -2497,7 +2509,9 @@ class TestAbstractPlaneData(object):
 
             assert mapper == 1
 
-        def test__inversion_uses_border_is_false__still_returns_mapper(self, sub_grid_7x7):
+        def test__inversion_uses_border_is_false__still_returns_mapper(
+            self, sub_grid_7x7
+        ):
             galaxy_pix = g.Galaxy(
                 redshift=0.5,
                 pixelization=mock_inv.MockPixelization(value=1),
@@ -3364,7 +3378,7 @@ class TestPlane(object):
 
 
 class TestPlaneImage:
-    def test__compute_xticks_from_regular_grid_correctly(self):
+    def test__compute_xticks_from_grid_correctly(self):
         plane_image = pl.PlaneImage(
             array=np.ones((3, 3)), pixel_scales=(5.0, 1.0), grid=None
         )
@@ -3386,7 +3400,7 @@ class TestPlaneImage:
             np.array([-3.0, -1.0, 1.0, 3.0]), 1e-2
         )
 
-    def test__compute_yticks_from_regular_grid_correctly(self):
+    def test__compute_yticks_from_grid_correctly(self):
         plane_image = pl.PlaneImage(
             array=np.ones((3, 3)), pixel_scales=(1.0, 5.0), grid=None
         )

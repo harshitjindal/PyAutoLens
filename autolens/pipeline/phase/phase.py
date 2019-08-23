@@ -456,6 +456,9 @@ class Phase(AbstractPhase):
             self.plot_ray_tracing_deflections = af.conf.instance.visualize.get(
                 "plots", "plot_ray_tracing_deflections", bool
             )
+            self.plot_ray_tracing_magnification = af.conf.instance.visualize.get(
+                "plots", "plot_ray_tracing_magnification", bool
+            )
 
 
 class GalaxyFitPhase(AbstractPhase):
@@ -466,7 +469,7 @@ class GalaxyFitPhase(AbstractPhase):
         phase_name,
         phase_folders=tuple(),
         galaxies=None,
-        use_intensities=False,
+        use_image=False,
         use_convergence=False,
         use_potential=False,
         use_deflections=False,
@@ -494,7 +497,7 @@ class GalaxyFitPhase(AbstractPhase):
             optimizer_class=optimizer_class,
             cosmology=cosmology,
         )
-        self.use_intensities = use_intensities
+        self.use_image = use_image
         self.use_convergence = use_convergence
         self.use_potential = use_potential
         self.use_deflections = use_deflections
@@ -559,14 +562,14 @@ class GalaxyFitPhase(AbstractPhase):
             inner_mask_radii=None,
         )
 
-        if self.use_intensities or self.use_convergence or self.use_potential:
+        if self.use_image or self.use_convergence or self.use_potential:
 
             galaxy_data = gd.GalaxyFitData(
                 galaxy_data=galaxy_data[0],
                 mask=mask,
                 sub_grid_size=self.sub_grid_size,
                 pixel_scale_interpolation_grid=self.pixel_scale_interpolation_grid,
-                use_image=self.use_intensities,
+                use_image=self.use_image,
                 use_convergence=self.use_convergence,
                 use_potential=self.use_potential,
                 use_deflections_y=self.use_deflections,
@@ -584,7 +587,7 @@ class GalaxyFitPhase(AbstractPhase):
                 mask=mask,
                 sub_grid_size=self.sub_grid_size,
                 pixel_scale_interpolation_grid=self.pixel_scale_interpolation_grid,
-                use_image=self.use_intensities,
+                use_image=self.use_image,
                 use_convergence=self.use_convergence,
                 use_potential=self.use_potential,
                 use_deflections_y=self.use_deflections,
@@ -596,7 +599,7 @@ class GalaxyFitPhase(AbstractPhase):
                 mask=mask,
                 sub_grid_size=self.sub_grid_size,
                 pixel_scale_interpolation_grid=self.pixel_scale_interpolation_grid,
-                use_image=self.use_intensities,
+                use_image=self.use_image,
                 use_convergence=self.use_convergence,
                 use_potential=self.use_potential,
                 use_deflections_y=False,
