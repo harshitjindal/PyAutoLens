@@ -812,12 +812,14 @@ class EllipticalIsothermalKormann(mp.EllipticalMassProfile, mp.MassProfile):
             sub-grid.
         """
 
-        deflection_y = np.arcsin(
+        factor = np.sqrt(self.axis_ratio)/np.sqrt(1-self.axis_ratio**2)
+
+        deflection_y = factor * np.arcsin(
             (np.sqrt(1 - self.axis_ratio ** 2) * grid[:, 0])
             / (np.sqrt((grid[:, 1] ** 2) * (self.axis_ratio ** 2) + grid[:, 0] ** 2))
         )
 
-        deflection_x = np.arcsinh(
+        deflection_x = factor * np.arcsinh(
             (np.sqrt(1 - self.axis_ratio ** 2) * grid[:, 1])
             / (
                 self.axis_ratio
@@ -831,12 +833,12 @@ class EllipticalIsothermalKormann(mp.EllipticalMassProfile, mp.MassProfile):
 
     def convergence_func(self, r):
         return (
-            self.einstein_radius * np.sqrt(self.axis_ratio) / (2 * r)
+                self.einstein_radius / (2 * r)
         )
 
     @property
     def ellipticity_rescale(self):
-        return 1/self.axis_ratio
+        return 1
 
     @dim.convert_units_to_input_units
     def summarize_in_units(
