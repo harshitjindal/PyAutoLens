@@ -1811,6 +1811,332 @@ class TestAbstractTracerLensing(object):
             assert (tracer_deflections[:, :, 0] == np.zeros(shape=(7, 7))).all()
             assert (tracer_deflections[:, :, 1] == np.zeros(shape=(7, 7))).all()
 
+    class TestJacobian(object):
+        def test__jacobian_components__tracer_with_galaxies_at_two_redshifts(self):
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                shape=(20, 20), pixel_scale=0.05
+            )
+
+            g0 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.SphericalIsothermal(
+                    centre=(0.0, 0.0), einstein_radius=1.0
+                ),
+            )
+
+            g1 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.SphericalIsothermal(
+                    centre=(1.0, 1.0), einstein_radius=2.0
+                ),
+            )
+
+            g2 = g.Galaxy(
+                redshift=1.0,
+                mass_profile=mp.SphericalIsothermal(
+                    centre=(-1.0, -1.0), einstein_radius=3.0)
+            )
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1, g2])
+
+            jacobian = tracer.lensing_jacobian_from_grid(grid=grid, return_in_2d=False)
+
+            A_12 = jacobian[0, 1]
+            A_21 = jacobian[1, 0]
+
+            mean_error = np.mean(A_12 - A_21)
+
+            assert mean_error < 1e-4
+
+            jacobian = tracer.lensing_jacobian_from_grid(
+                grid=grid, return_in_2d=False, return_binned=True
+            )
+
+            A_12 = jacobian[0, 1]
+            A_21 = jacobian[1, 0]
+
+            mean_error = np.mean(A_12 - A_21)
+
+            assert mean_error < 1e-4
+
+        def test__jacobian_sub_grid_binning__tracer_with_galaxies_at_two_redshifts(self):
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                shape=(10, 10), pixel_scale=0.05, sub_grid_size=2
+            )
+
+            g0 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.SphericalIsothermal(
+                    centre=(0.0, 0.0), einstein_radius=1.0
+                ),
+            )
+
+            g1 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.SphericalIsothermal(
+                    centre=(1.0, 1.0), einstein_radius=2.0
+                ),
+            )
+
+            g2 = g.Galaxy(
+                redshift=1.0,
+                mass_profile=mp.SphericalIsothermal(
+                    centre=(-1.0, 1.0), einstein_radius=3.0)
+            )
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1, g2])
+
+            jacobian_binned_reg_grid = tracer.lensing_jacobian_from_grid(
+                grid=grid, return_in_2d=False, return_binned=True
+            )
+            a11_binned_reg_grid = jacobian_binned_reg_grid[0, 0]
+
+            jacobian_sub_grid = tracer.lensing_jacobian_from_grid(
+                grid=grid, return_in_2d=False, return_binned=False
+            )
+            a11_sub_grid = jacobian_sub_grid[0, 0]
+
+            pixel_1_reg_grid = a11_binned_reg_grid[0]
+            pixel_1_from_av_sub_grid = (
+                a11_sub_grid[0] + a11_sub_grid[1] + a11_sub_grid[2] + a11_sub_grid[3]
+            ) / 4
+
+            assert jacobian_binned_reg_grid.shape == (2, 2, 100)
+            assert jacobian_sub_grid.shape == (2, 2, 400)
+            assert pixel_1_reg_grid == pytest.approx(pixel_1_from_av_sub_grid, 1e-4)
+
+            pixel_10000_reg_grid = a11_binned_reg_grid[99]
+
+            pixel_10000_from_av_sub_grid = (
+                a11_sub_grid[399]
+                + a11_sub_grid[398]
+                + a11_sub_grid[397]
+                + a11_sub_grid[396]
+            ) / 4
+
+            assert pixel_10000_reg_grid == pytest.approx(
+                pixel_10000_from_av_sub_grid, 1e-4
+            )
+
+        def test_lambda_t_sub_grid_binning__tracer_with_galaxies_at_two_redshifts(self):
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                    shape=(10, 10), pixel_scale=0.05, sub_grid_size=2
+                )
+
+            g0 = g.Galaxy(
+                   redshift=0.5,
+                    mass_profile=mp.SphericalIsothermal(
+                        centre=(0.0, 0.0), einstein_radius=1.0
+                    ),
+                )
+
+            g1 = g.Galaxy(
+                    redshift=0.5,
+                    mass_profile=mp.SphericalIsothermal(
+                        centre=(1.0, 1.0), einstein_radius=2.0
+                    ),
+                )
+
+            g2 = g.Galaxy(
+                    redshift=1.0,
+                    mass_profile=mp.SphericalIsothermal(
+                        centre=(-1.0, 1.0), einstein_radius=3.0)
+                )
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1, g2])
+
+            lambda_t_binned_reg_grid = tracer.tangential_eigen_value_from_grid(
+                    grid=grid, return_in_2d=False, return_binned=True
+                )
+
+            lambda_t_sub_grid = tracer.tangential_eigen_value_from_grid(
+                    grid=grid, return_in_2d=False, return_binned=False
+                )
+
+            pixel_1_reg_grid = lambda_t_binned_reg_grid[0]
+            pixel_1_from_av_sub_grid = (
+                                                   lambda_t_sub_grid[0]
+                                                   + lambda_t_sub_grid[1]
+                                                   + lambda_t_sub_grid[2]
+                                                   + lambda_t_sub_grid[3]
+                                           ) / 4
+
+            assert pixel_1_reg_grid == pytest.approx(pixel_1_from_av_sub_grid, 1e-4)
+
+            pixel_10000_reg_grid = lambda_t_binned_reg_grid[99]
+
+            pixel_10000_from_av_sub_grid = (
+                                                       lambda_t_sub_grid[399]
+                                                       + lambda_t_sub_grid[398]
+                                                       + lambda_t_sub_grid[397]
+                                                       + lambda_t_sub_grid[396]
+                                               ) / 4
+
+            assert pixel_10000_reg_grid == pytest.approx(
+                    pixel_10000_from_av_sub_grid, 1e-4
+                )
+
+    class TestDeflectionsviaPotential:
+        def test__compare_tracer_deflections_via_potential_and_calculation(self):
+
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                shape=(10, 10), pixel_scale=0.05
+            )
+
+            g0 = g.Galaxy(
+                redshift=0.5, mass_profile=mp.SphericalIsothermal(einstein_radius=1.0)
+            )
+
+            g1 = g.Galaxy(
+                redshift=0.5, mass_profile=mp.SphericalIsothermal(einstein_radius=2.0)
+            )
+
+            g2 = g.Galaxy(
+                redshift=1.0, mass_profile=mp.SphericalIsothermal(einstein_radius=3.0)
+            )
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1, g2])
+
+            image_plane_deflections_via_calculation = tracer.image_plane.deflections_from_grid(
+                grid=grid, return_in_2d=False, return_binned=True
+            )
+
+            image_plane_deflections_via_potential = tracer.image_plane.deflections_via_potential_from_grid(
+                grid=grid, return_in_2d=False, return_binned=True
+            )
+
+            image_plane_mean_error = np.mean(
+                image_plane_deflections_via_potential - image_plane_deflections_via_calculation
+            )
+
+            source_plane_deflections_via_calculation = tracer.source_plane.deflections_from_grid(
+                grid=grid, return_in_2d=False, return_binned=True
+            )
+
+            source_plane_deflections_via_potential = tracer.source_plane.deflections_via_potential_from_grid(
+                grid=grid, return_in_2d=False, return_binned=True
+            )
+
+            source_plane_mean_error = np.mean(
+                source_plane_deflections_via_potential - source_plane_deflections_via_calculation
+            )
+
+            tracer_deflections_via_calculation = tracer.deflections_from_grid(
+                grid=grid, return_in_2d=False, return_binned=True
+            )
+
+            tracer_deflections_via_potential = tracer.deflections_via_potential_from_grid(
+                grid=grid, return_in_2d=False, return_binned=True
+            )
+
+            tracer_mean_error = np.mean(
+                tracer_deflections_via_potential - tracer_deflections_via_calculation
+            )
+
+            assert image_plane_mean_error < 1e-4
+
+            assert source_plane_mean_error < 1e-4
+
+            assert tracer_mean_error < 1e-4
+
+        def test__galaxy_entered_3_times__different_deflections_for_each(
+            self
+        ):
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                shape=(10, 10), pixel_scale=0.05
+            )
+
+            g0 = g.Galaxy(
+                redshift=0.5, mass_profile=mp.SphericalIsothermal(einstein_radius=1.0)
+            )
+            g1 = g.Galaxy(
+                redshift=0.5, mass_profile=mp.SphericalIsothermal(einstein_radius=2.0)
+            )
+            g2 = g.Galaxy(
+                redshift=1.0, mass_profile=mp.SphericalIsothermal(einstein_radius=3.0)
+            )
+
+            g0_deflections = g0.deflections_via_potential_from_grid(
+                grid=grid, return_in_2d=True, return_binned=True
+            )
+
+            g1_deflections = g1.deflections_via_potential_from_grid(
+                grid=grid, return_in_2d=True, return_binned=True
+            )
+
+            g2_deflections = g2.deflections_via_potential_from_grid(
+                grid=grid, return_in_2d=True, return_binned=True
+            )
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1, g2])
+
+            image_plane_deflections = tracer.image_plane.deflections_via_potential_from_grid(
+                grid=grid, return_in_2d=True, return_binned=True
+            )
+
+            source_plane_deflections = tracer.source_plane.deflections_via_potential_from_grid(
+                grid=grid, return_in_2d=True, return_binned=True
+            )
+
+            tracer_deflections = tracer.deflections_via_potential_from_grid(
+                grid=grid, return_in_2d=True, return_binned=True
+            )
+
+            assert image_plane_deflections[:, :, 0] == pytest.approx(
+                g0_deflections[:, :, 0] + g1_deflections[:, :, 0], 1.0e-4
+            )
+            assert source_plane_deflections[:, :, 0] == pytest.approx(
+                g2_deflections[:, :, 0], 1.0e-4
+            )
+            assert tracer_deflections[:, :, 0] == pytest.approx(
+                g0_deflections[:, :, 0]
+                + g1_deflections[:, :, 0]
+                + g2_deflections[:, :, 0],
+                1.0e-4,
+            )
+
+    class TestConvergenceviaJacobian(object):
+        def test__compare_tracer_convergence_via_jacobian_and_calculation(self):
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                shape=(20, 20), pixel_scale=0.05
+            )
+
+            g0 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.SphericalIsothermal(
+                    centre=(0.0, 0.0), einstein_radius=1.0
+                ),
+            )
+
+            g1 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.SphericalIsothermal(
+                    centre=(1.0, 1.0), einstein_radius=2.0
+                ),
+            )
+
+            #g2 = g.Galaxy(
+            #    redshift=1.0, mass_profile=mp.SphericalIsothermal(
+            #        einstein_radius=3.0)
+            #)
+
+            ## works with two galaxies at same redshift but not with third at different redshift
+            ## - error is greater than 1e-1
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1])
+
+            convergence_via_calculation = tracer.convergence_from_grid(
+                grid=grid, return_in_2d=False, return_binned=False
+            )
+
+            convergence_via_jacobian = tracer.convergence_via_jacobian_from_grid(
+                grid=grid, return_in_2d=False, return_binned=False
+            )
+
+            mean_error = np.mean(convergence_via_jacobian - convergence_via_calculation)
+
+            assert mean_error < 1e-1
+
     class TestGridAtRedshift:
         def test__lens_z05_source_z01_redshifts__match_planes_redshifts__gives_same_grids(
             self, sub_grid_7x7

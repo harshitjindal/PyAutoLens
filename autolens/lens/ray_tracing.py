@@ -336,6 +336,96 @@ class AbstractTracerLensing(AbstractTracerCosmology):
             ]
         )
 
+    @reshape_returned_grid
+    def deflections_via_potential_from_grid(
+            self, grid, return_in_2d=True, return_binned=True
+    ):
+        potential_2d = self.potential_from_grid(
+            grid=grid, return_in_2d=True, return_binned=False
+        )
+
+        deflections_y_2d = np.gradient(potential_2d, grid.in_2d[:, 0, 0], axis=0)
+        deflections_x_2d = np.gradient(potential_2d, grid.in_2d[0, :, 1], axis=1)
+
+        return np.stack((deflections_y_2d, deflections_x_2d), axis=-1)
+
+    @reshape_array_from_grid
+    def lensing_jacobian_a11_from_grid(
+            self, grid, return_in_2d=True, return_binned=True
+    ):
+
+        deflections_2d = self.deflections_from_grid(
+            grid=grid, return_in_2d=True, return_binned=False
+        )
+
+        return 1.0 - np.gradient(deflections_2d[:, :, 1], grid.in_2d[0, :, 1], axis=1)
+
+    @reshape_array_from_grid
+    def lensing_jacobian_a12_from_grid(
+            self, grid, return_in_2d=True, return_binned=True
+    ):
+
+        deflections_2d = self.deflections_from_grid(
+            grid=grid, return_in_2d=True, return_binned=False
+        )
+
+        return -1.0 * np.gradient(deflections_2d[:, :, 1], grid.in_2d[:, 0, 0], axis=0)
+
+    @reshape_array_from_grid
+    def lensing_jacobian_a21_from_grid(
+            self, grid, return_in_2d=True, return_binned=True
+    ):
+
+        deflections_2d = self.deflections_from_grid(
+            grid=grid, return_in_2d=True, return_binned=False
+        )
+
+        return -1.0 * np.gradient(deflections_2d[:, :, 0], grid.in_2d[0, :, 1], axis=1)
+
+    @reshape_array_from_grid
+    def lensing_jacobian_a22_from_grid(
+            self, grid, return_in_2d=True, return_binned=True
+    ):
+
+        deflections_2d = self.deflections_from_grid(
+            grid=grid, return_in_2d=True, return_binned=False
+        )
+
+        return 1 - np.gradient(deflections_2d[:, :, 0], grid.in_2d[:, 0, 0], axis=0)
+
+    def lensing_jacobian_from_grid(self, grid, return_in_2d=True, return_binned=True):
+
+        a11 = self.lensing_jacobian_a11_from_grid(
+            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
+        )
+
+        a12 = self.lensing_jacobian_a12_from_grid(
+            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
+        )
+
+        a21 = self.lensing_jacobian_a21_from_grid(
+            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
+        )
+
+        a22 = self.lensing_jacobian_a22_from_grid(
+            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
+        )
+
+        return np.array([[a11, a12], [a21, a22]])
+
+    @reshape_array_from_grid
+    def convergence_via_jacobian_from_grid(
+            self, grid, return_in_2d=True, return_binned=True
+    ):
+
+        jacobian = self.lensing_jacobian_from_grid(
+            grid=grid, return_in_2d=False, return_binned=False
+        )
+
+        convergence = 1 - 0.5 * (jacobian[0, 0] + jacobian[1, 1])
+
+        return convergence
+
     def einstein_radius_of_plane_in_units(self, i, unit_length="arcsec"):
         return self.planes[i].einstein_radius_in_units(unit_length=unit_length)
 

@@ -28,7 +28,7 @@ def make_pipeline(name, phase_folders, optimizer_class=af.MultiNest):
     phase1.optimizer.sampling_efficiency = 0.7
 
     class AddSourceGalaxyPhase(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             self.galaxies.lens = results.from_phase("phase_1").variable.lens
             self.galaxies.source_0 = results.from_phase("phase_1").variable.source_0

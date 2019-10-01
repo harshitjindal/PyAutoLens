@@ -1,6 +1,5 @@
-from scipy import special
 from pyquad import quad_grid
-
+from scipy import special
 import numpy as np
 from astropy import cosmology as cosmo
 
@@ -730,9 +729,6 @@ class EllipticalIsothermalKormann(mp.EllipticalMassProfile, mp.MassProfile):
         )
         self.einstein_radius = einstein_radius
 
-    @reshape_array_from_grid
-    @geometry_profiles.transform_grid
-    @geometry_profiles.move_grid_to_radial_minimum
     def convergence_from_grid(self, grid, return_in_2d=True, return_binned=True):
         """ Calculate the projected convergence at a given set of arc-second gridded coordinates.
 
@@ -753,7 +749,8 @@ class EllipticalIsothermalKormann(mp.EllipticalMassProfile, mp.MassProfile):
 
         covnergence_grid = np.zeros(grid.shape[0])
 
-        grid_eta = self.grid_to_elliptical_radii(grid=grid)
+        grid_eta = self.grid_to_elliptical_radii_Kormann(grid=grid)
+        print(grid_eta)
 
         for i in range(grid.shape[0]):
             covnergence_grid[i] = self.convergence_func(r=grid_eta[i])
@@ -786,9 +783,9 @@ class EllipticalIsothermalKormann(mp.EllipticalMassProfile, mp.MassProfile):
         cos_phi = grid[:, 0] / np.sqrt(
             self.axis_ratio ** 2 * grid[:, 0] ** 2 + grid[:, 1] ** 2
         )
-        return (np.sqrt(self.axis_ratio) / f_prime) * (
-            grid[:, 1] * np.arcsin(f_prime * sin_phi)
-            + grid[:, 0] * np.arcsinh((f_prime / self.axis_ratio) * cos_phi)
+        return (self.einstein_radius*np.sqrt(self.axis_ratio) / f_prime) * (
+            grid[:,1] * np.arcsin(f_prime * sin_phi)
+            + grid[:,0] * np.arcsinh((f_prime / self.axis_ratio) * cos_phi)
         )
 
     @reshape_returned_grid
@@ -814,16 +811,16 @@ class EllipticalIsothermalKormann(mp.EllipticalMassProfile, mp.MassProfile):
 
         factor = self.einstein_radius * np.sqrt(self.axis_ratio) / np.sqrt(1 - self.axis_ratio ** 2)
 
-        deflection_y = factor * np.arcsin(
-            (np.sqrt(1 - self.axis_ratio ** 2) * grid[:, 0])
-            / (np.sqrt((grid[:, 1] ** 2) * (self.axis_ratio ** 2) + grid[:, 0] ** 2))
+        deflection_x = factor * np.arcsin(
+            (np.sqrt(1 - self.axis_ratio ** 2) * grid[:, 1])
+            / (np.sqrt((grid[:, 0] ** 2) * (self.axis_ratio ** 2) + grid[:, 1] ** 2))
         )
 
-        deflection_x = factor * np.arcsinh(
-            (np.sqrt(1 - self.axis_ratio ** 2) * grid[:, 1])
+        deflection_y = factor * np.arcsinh(
+            (np.sqrt(1 - self.axis_ratio ** 2) * grid[:, 0])
             / (
                 self.axis_ratio
-                * np.sqrt((self.axis_ratio ** 2) * (grid[:, 1] ** 2) + grid[:, 0] ** 2)
+                * np.sqrt((self.axis_ratio ** 2) * (grid[:, 0] ** 2) + grid[:, 1] ** 2)
             )
         )
 
@@ -833,12 +830,12 @@ class EllipticalIsothermalKormann(mp.EllipticalMassProfile, mp.MassProfile):
 
     def convergence_func(self, r):
         return (
-            self.einstein_radius * np.sqrt(self.axis_ratio) / (2 * self.axis_ratio * r)
+            self.einstein_radius * np.sqrt(self.axis_ratio)/ (2 * r)
         )
 
     @property
     def ellipticity_rescale(self):
-        return 1.0 / (self.axis_ratio ** 0.5)
+        return 1/self.axis_ratio
 
     @dim.convert_units_to_input_units
     def summarize_in_units(

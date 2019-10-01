@@ -13,7 +13,7 @@ data_resolution = "LSST"
 
 def make_pipeline(name, phase_folders, optimizer_class=af.MultiNest):
     class MMPhase(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             self.galaxies.lens.light.axis_ratio = 0.2
             self.galaxies.lens.light.phi = 90.0
@@ -30,7 +30,7 @@ def make_pipeline(name, phase_folders, optimizer_class=af.MultiNest):
     phase1.optimizer.sampling_efficiency = 0.8
 
     class MMPhase2(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             self.galaxies.lens.light.intensity = results.from_phase(
                 "phase_1"

@@ -19,7 +19,7 @@ def make_pipeline(name, phase_folders, optimizer_class=af.MultiNest):
         )
 
     class LensPlaneGalaxy0Phase(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             self.galaxies.lens_0.sersic.centre_0 = -1.0
             self.galaxies.lens_0.sersic.centre_1 = -1.0
@@ -37,7 +37,7 @@ def make_pipeline(name, phase_folders, optimizer_class=af.MultiNest):
     phase1.optimizer.sampling_efficiency = 0.8
 
     class LensPlaneGalaxy1Phase(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             self.galaxies.lens_0 = results.from_phase(
                 "phase_1"
@@ -62,7 +62,7 @@ def make_pipeline(name, phase_folders, optimizer_class=af.MultiNest):
     phase2.optimizer.sampling_efficiency = 0.8
 
     class LensPlaneBothGalaxyPhase(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             self.galaxies.lens_0 = results.from_phase(
                 "phase_1"

@@ -15,7 +15,7 @@ data_resolution = "LSST"
 
 def make_pipeline(name, phase_folders, optimizer_class=af.MultiNest):
     class Phase1(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             self.galaxies.source.light.sersic_index = af.UniformPrior(3.9, 4.1)
 
@@ -36,7 +36,7 @@ def make_pipeline(name, phase_folders, optimizer_class=af.MultiNest):
     phase1 = phase1.extend_with_multiple_hyper_phases(hyper_galaxy=True)
 
     class InversionPhase(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             ## Lens Mass, SIE -> SIE, Shear -> Shear ###
 
@@ -72,7 +72,7 @@ def make_pipeline(name, phase_folders, optimizer_class=af.MultiNest):
     phase2 = phase2.extend_with_multiple_hyper_phases(hyper_galaxy=True, inversion=True)
 
     class InversionPhase(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             ## Lens Mass, SIE -> SIE, Shear -> Shear ###
 

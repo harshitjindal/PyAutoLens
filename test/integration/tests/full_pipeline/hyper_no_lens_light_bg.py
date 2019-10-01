@@ -43,7 +43,7 @@ def make_pipeline(
     )
 
     class InversionPhase(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             ## Lens Mass, SIE -> SIE, Shear -> Shear ###
 
@@ -87,7 +87,7 @@ def make_pipeline(
     )
 
     class InversionPhase(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             ### Lens Mass, SIE -> SIE, Shear -> Shear ###
 
@@ -137,7 +137,7 @@ def make_pipeline(
     )
 
     class InversionPhase(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             ## Lens Mass, SIE -> SIE, Shear -> Shear ###
 
@@ -181,7 +181,7 @@ def make_pipeline(
     )
 
     class InversionPhase(phase_imaging.PhaseImaging):
-        def pass_priors(self, results):
+        def customize_priors(self, results):
 
             ### Lens Mass, SIE -> SIE, Shear -> Shear ###
 

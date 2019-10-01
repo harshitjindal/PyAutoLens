@@ -397,7 +397,7 @@ class TestPhase(object):
         self, mask_function_7x7, results_7x7, results_collection_7x7, ccd_data_7x7
     ):
         class MyPlanePhaseAnd(phase_imaging.PhaseImaging):
-            def pass_priors(self, results):
+            def customize_priors(self, results):
                 self.galaxies = results.last.constant.galaxies
 
         galaxy = g.Galaxy(redshift=0.5)
@@ -413,12 +413,12 @@ class TestPhase(object):
         )
 
         phase_7x7.make_analysis(data=ccd_data_7x7, results=results_collection_7x7)
-        phase_7x7.pass_priors(results_collection_7x7)
+        phase_7x7.customize_priors(results_collection_7x7)
 
         assert phase_7x7.galaxies == [galaxy]
 
         class MyPlanePhaseAnd(phase_imaging.PhaseImaging):
-            def pass_priors(self, results):
+            def customize_priors(self, results):
                 self.galaxies = results.last.variable.galaxies
 
         galaxy = g.Galaxy(redshift=0.5)
@@ -434,7 +434,7 @@ class TestPhase(object):
         )
 
         phase_7x7.make_analysis(data=ccd_data_7x7, results=results_collection_7x7)
-        phase_7x7.pass_priors(results_collection_7x7)
+        phase_7x7.customize_priors(results_collection_7x7)
 
         assert phase_7x7.galaxies == [galaxy_model]
 
@@ -1370,7 +1370,7 @@ class TestPhasePickle(object):
         assert result is not None
 
         class CustomPhase(phase_imaging.PhaseImaging):
-            def pass_priors(self, results):
+            def customize_priors(self, results):
                 self.galaxies.lens.light = lp.EllipticalLightProfile()
 
         phase_7x7 = CustomPhase(
