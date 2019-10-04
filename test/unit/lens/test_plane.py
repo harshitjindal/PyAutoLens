@@ -1558,40 +1558,12 @@ class TestAbstractPlaneLensing(object):
                 grid=grid, return_in_2d=True
             )
 
-            radal_eigen_value = plane.radial_eigen_value_from_grid(
+            radial_eigen_value = plane.radial_eigen_value_from_grid(
                 grid=grid, return_in_2d=True
             )
 
             magnification_via_eigen_values = 1 / (
-                tangential_eigen_value * radal_eigen_value
-            )
-
-            mean_error = np.mean(
-                magnification_via_determinant - magnification_via_eigen_values
-            )
-
-            assert mean_error < 1e-4
-
-            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
-                shape=(10, 10), pixel_scale=0.05, sub_grid_size=2
-            )
-
-            plane = pl.Plane(galaxies=[g0, g1], redshift=None)
-
-            magnification_via_determinant = plane.magnification_from_grid(
-                grid=grid, return_in_2d=True, return_binned=False
-            )
-
-            tangential_eigen_value = plane.tangential_eigen_value_from_grid(
-                grid=grid, return_in_2d=True, return_binned=False
-            )
-
-            radal_eigen_value = plane.radial_eigen_value_from_grid(
-                grid=grid, return_in_2d=True, return_binned=False
-            )
-
-            magnification_via_eigen_values = 1 / (
-                tangential_eigen_value * radal_eigen_value
+                tangential_eigen_value * radial_eigen_value
             )
 
             mean_error = np.mean(

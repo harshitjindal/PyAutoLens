@@ -1,5 +1,6 @@
 import numpy as np
 from astropy import cosmology as cosmo
+from skimage import measure
 
 from autolens import exc
 from autolens.array import grids
@@ -425,6 +426,129 @@ class AbstractTracerLensing(AbstractTracerCosmology):
         convergence = 1 - 0.5 * (jacobian[0, 0] + jacobian[1, 1])
 
         return convergence
+
+    @reshape_array_from_grid
+    def shear_via_jacobian_from_grid(self, grid, return_in_2d=True, return_binned=True):
+
+        jacobian = self.lensing_jacobian_from_grid(
+            grid=grid, return_in_2d=True, return_binned=False
+        )
+
+        gamma_1 = 0.5 * (jacobian[1, 1] - jacobian[0, 0])
+        gamma_2 = -0.5 * (jacobian[0, 1] + jacobian[1, 0])
+
+        return (gamma_1 ** 2 + gamma_2 ** 2) ** 0.5
+
+    @reshape_array_from_grid
+    def tangential_eigen_value_from_grid(
+            self, grid, return_in_2d=True, return_binned=True
+    ):
+
+        convergence = self.convergence_via_jacobian_from_grid(
+            grid=grid, return_in_2d=False, return_binned=False
+        )
+
+        shear = self.shear_via_jacobian_from_grid(
+            grid=grid, return_in_2d=False, return_binned=False
+        )
+
+        return 1 - convergence - shear
+
+    @reshape_array_from_grid
+    def radial_eigen_value_from_grid(self, grid, return_in_2d=True, return_binned=True):
+
+        convergence = self.convergence_via_jacobian_from_grid(
+            grid=grid, return_in_2d=False, return_binned=False
+        )
+
+        shear = self.shear_via_jacobian_from_grid(
+            grid=grid, return_in_2d=False, return_binned=False
+        )
+
+        return 1 - convergence + shear
+
+    @reshape_array_from_grid
+    def magnification_from_grid(self, grid, return_in_2d=True, return_binned=True):
+
+        jacobian = self.lensing_jacobian_from_grid(
+            grid=grid, return_in_2d=False, return_binned=False
+        )
+
+        det_jacobian = jacobian[0, 0] * jacobian[1, 1] - jacobian[0, 1] * jacobian[1, 0]
+
+        return 1 / det_jacobian
+
+    def tangential_critical_curve_from_grid(self, grid):
+
+        lambda_tangential_2d = self.tangential_eigen_value_from_grid(
+            grid=grid, return_in_2d=True, return_binned=False
+        )
+
+        tangential_critical_curve_indices = measure.find_contours(
+            lambda_tangential_2d, 0
+        )
+        print(tangential_critical_curve_indices)
+
+        if tangential_critical_curve_indices == []:
+            return []
+
+        return grid.marching_squares_grid_pixels_to_grid_arcsec(
+            grid_pixels=tangential_critical_curve_indices[0],
+            shape=lambda_tangential_2d.shape,
+        )
+
+    def radial_critical_curve_from_grid(self, grid):
+
+        lambda_radial_2d = self.radial_eigen_value_from_grid(
+            grid=grid, return_in_2d=True, return_binned=False
+        )
+
+        radial_critical_curve_indices = measure.find_contours(lambda_radial_2d, 0)
+
+        if radial_critical_curve_indices == []:
+            return []
+
+        return grid.marching_squares_grid_pixels_to_grid_arcsec(
+            grid_pixels=radial_critical_curve_indices[0], shape=lambda_radial_2d.shape
+        )
+
+    def tangential_caustic_from_grid(self, grid):
+
+        tangential_critical_curve = self.tangential_critical_curve_from_grid(grid=grid)
+
+        if tangential_critical_curve == []:
+            return []
+
+        deflections_1d = self.deflections_from_grid(
+            grid=tangential_critical_curve, return_in_2d=False, return_binned=False
+        )
+
+        return tangential_critical_curve - deflections_1d
+
+    def radial_caustic_from_grid(self, grid):
+
+        radial_critical_curve = self.radial_critical_curve_from_grid(grid=grid)
+
+        if radial_critical_curve == []:
+            return []
+
+        deflections_1d = self.deflections_from_grid(
+            grid=radial_critical_curve, return_in_2d=False, return_binned=False
+        )
+
+        return radial_critical_curve - deflections_1d
+
+    def critical_curves_from_grid(self, grid):
+        return [
+            self.tangential_critical_curve_from_grid(grid=grid),
+            self.radial_critical_curve_from_grid(grid=grid),
+        ]
+
+    def caustics_from_grid(self, grid):
+        return [
+            self.tangential_caustic_from_grid(grid=grid),
+            self.radial_caustic_from_grid(grid=grid),
+        ]
 
     def einstein_radius_of_plane_in_units(self, i, unit_length="arcsec"):
         return self.planes[i].einstein_radius_in_units(unit_length=unit_length)
