@@ -17,56 +17,63 @@ from autolens.model.profiles import mass_profiles as mp
 
 from test.unit.mock.model import mock_inversion as mock_inv
 
-def critical_curve_via_magnification_from_tracer_and_grid(tracer, grid):
-
-    magnification_2d = tracer.magnification_from_grid(
+def tangential_critical_curve_from_eigenvalue(tracer, grid):
+    lambda_tangential_2d = tracer.tangential_eigen_value_from_grid(
         grid=grid, return_in_2d=True, return_binned=False
     )
 
-    inverse_magnification_2d = 1 / magnification_2d
-
-    critical_curves_indices = measure.find_contours(inverse_magnification_2d, 0)
-
-    no_critical_curves = len(critical_curves_indices)
-    contours = []
-    critical_curves = []
-
-    for jj in np.arange(no_critical_curves):
-
-        contours.append(critical_curves_indices[jj])
-        contour_x, contour_y = contours[jj].T
-        pixel_coord = np.stack((contour_x, contour_y), axis=-1)
-
-        critical_curve = grid.marching_squares_grid_pixels_to_grid_arcsec(
-            grid_pixels=pixel_coord, shape=magnification_2d.shape
-        )
-
-        critical_curves.append(critical_curve)
-
-    return critical_curves
-
-
-def caustics_via_magnification_from_tracer_and_grid(tracer, grid):
-
-    caustics = []
-
-    critical_curves = critical_curve_via_magnification_from_plane_and_grid(
-        tracer=tracer, grid=grid
+    tangential_critical_curve_indices = measure.find_contours(
+        lambda_tangential_2d, 0
     )
 
-    for i in range(len(critical_curves)):
+    if tangential_critical_curve_indices == []:
+        return []
 
-        critical_curve = critical_curves[i]
+    return grid.marching_squares_grid_pixels_to_grid_arcsec(
+        grid_pixels=tangential_critical_curve_indices[0],
+        shape=lambda_tangential_2d.shape,
+    )
 
-        deflections_1d = tracer.deflections_from_grid(
-            grid=critical_curve, return_in_2d=False, return_binned=False
-        )
+def radial_critical_curve_from_eigenvalue(tracer, grid):
+    lambda_radial_2d = tracer.radial_eigen_value_from_grid(
+        grid=grid, return_in_2d=True, return_binned=False
+    )
 
-        caustic = critical_curve - deflections_1d
+    radial_critical_curve_indices = measure.find_contours(lambda_radial_2d, 0)
 
-        caustics.append(caustic)
+    if radial_critical_curve_indices == []:
+        return []
 
-    return caustics
+    return grid.marching_squares_grid_pixels_to_grid_arcsec(
+        grid_pixels=radial_critical_curve_indices[0], shape=lambda_radial_2d.shape
+    )
+
+def tangential_caustic_from_eigenvalue(tracer, grid):
+    tangential_critical_curve = tangential_critical_curve_from_eigenvalue(tracer=tracer, grid=grid)
+
+    if tangential_critical_curve == []:
+        return []
+
+    deflections_1d = tracer.deflections_from_grid(
+        grid=tangential_critical_curve, return_in_2d=False, return_binned=False
+    )
+
+    return tangential_critical_curve - deflections_1d
+
+def radial_caustic_from_eigenvalue(tracer, grid):
+    radial_critical_curve = radial_critical_curve_from_eigenvalue(tracer=tracer, grid=grid)
+
+    if radial_critical_curve == []:
+        return []
+
+    deflections_1d = tracer.deflections_from_grid(
+        grid=radial_critical_curve, return_in_2d=False, return_binned=False
+    )
+
+    return radial_critical_curve - deflections_1d
+
+
+
 
 class TestAbstractTracer(object):
     class TestProperties:
@@ -2476,9 +2483,180 @@ class TestAbstractTracerLensing(object):
             assert mean_error < 1e-4
 
     class TestCriticalCurvesandCaustics(object):
-        def test__compare_tangential_critical_curves_from_magnification_and_lambda_t__two_redshift_tracer(
+        def test__compare_tangential_critical_curves_from_magnification_and_lambda_t__one_redshift_tracer(
             self
         ):
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                shape=(100, 100), pixel_scale=0.05, sub_grid_size=1
+            )
+
+            g0 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.EllipticalIsothermal(
+                    centre=(0.0, 0.0), einstein_radius=1.4, axis_ratio=0.7, phi=40.0
+                ),
+            )
+
+            g1 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.SphericalIsothermal(
+                    centre=(1.0, 1.0), einstein_radius=2.0
+                ),
+            )
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1])
+
+            critical_curve_tangential_from_magnification = tracer.tangential_critical_curve_from_grid(grid=grid)
+
+            critical_curve_tangential_from_lambda_t = tangential_critical_curve_from_eigenvalue(
+                tracer=tracer, grid=grid)
+
+            assert critical_curve_tangential_from_lambda_t == pytest.approx(
+                critical_curve_tangential_from_magnification, 1e-4
+            )
+
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                shape=(100, 100), pixel_scale=0.05, sub_grid_size=2
+            )
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1])
+
+            critical_curve_tangential_from_magnification = tracer.tangential_critical_curve_from_grid(grid=grid)
+
+            critical_curve_tangential_from_lambda_t = tangential_critical_curve_from_eigenvalue(
+                tracer=tracer, grid=grid)
+
+            assert critical_curve_tangential_from_lambda_t == pytest.approx(
+                critical_curve_tangential_from_magnification, 1e-4
+            )
+
+        def test__compare_radial_critical_curves_from_magnification_and_lamda_t__one_redshift_tracer(
+            self
+        ):
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                shape=(100, 100), pixel_scale=0.05, sub_grid_size=1
+            )
+
+            g0 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.EllipticalIsothermal(
+                    centre=(0.0, 0.0), einstein_radius=1.4, axis_ratio=0.7, phi=40.0
+                ),
+            )
+
+            g1 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.SphericalIsothermal(
+                    centre=(1.0, 1.0), einstein_radius=2.0
+                ),
+            )
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1])
+
+            critical_curve_radial_from_magnification = tracer.radial_critical_curve_from_grid(grid=grid)
+
+            critical_curve_radial_from_lambda_t = radial_critical_curve_from_eigenvalue(tracer=tracer, grid=grid)
+
+            assert sum(critical_curve_radial_from_lambda_t) == pytest.approx(
+                sum(critical_curve_radial_from_magnification), 1e-2
+            )
+
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                shape=(100, 100), pixel_scale=0.05, sub_grid_size=2
+            )
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1])
+
+            critical_curve_radial_from_magnification = tracer.radial_critical_curve_from_grid(grid=grid)
+
+            critical_curve_radial_from_lambda_t = radial_critical_curve_from_eigenvalue(tracer=tracer, grid=grid)
+
+            assert sum(critical_curve_radial_from_lambda_t) == pytest.approx(
+                sum(critical_curve_radial_from_magnification), 1e-2
+            )
+
+        def test__compare_tangential_caustic_from_magnification_and_lambda_t__one_redshift_tracer(
+            self
+        ):
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                shape=(20, 20), pixel_scale=0.25
+            )
+
+            g0 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.EllipticalIsothermal(
+                    centre=(0.0, 0.0), einstein_radius=1.4, axis_ratio=0.7, phi=40.0
+                ),
+            )
+
+            g1 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.SphericalIsothermal(
+                    centre=(1.0, 1.0), einstein_radius=2.0
+                ),
+            )
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1])
+
+            caustic_tangential_from_magnification = tracer.tangential_caustic_from_grid(grid=grid)
+
+            caustic_tangential_from_lambda_t = tangential_caustic_from_eigenvalue(tracer=tracer, grid=grid)
+
+            assert caustic_tangential_from_lambda_t == pytest.approx(
+                caustic_tangential_from_magnification, 5e-1
+            )
+
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                shape=(20, 20), pixel_scale=0.5, sub_grid_size=2
+            )
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1])
+
+            caustic_tangential_from_magnification = tracer.tangential_caustic_from_grid(grid=grid)
+
+            caustic_tangential_from_lambda_t = tangential_caustic_from_eigenvalue(tracer=tracer, grid=grid)
+
+            assert caustic_tangential_from_lambda_t == pytest.approx(
+                caustic_tangential_from_magnification, 5e-1
+            )
+
+        def test__compare_radial_caustic_from_magnification_and_lambda_t__one_redshift_tracer(
+            self
+        ):
+            grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
+                shape=(60, 60), pixel_scale=0.5, sub_grid_size=2
+            )
+
+            g0 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.EllipticalIsothermal(
+                    centre=(0.0, 0.0), einstein_radius=1.4, axis_ratio=0.7, phi=40.0
+                ),
+            )
+
+            g1 = g.Galaxy(
+                redshift=0.5,
+                mass_profile=mp.SphericalIsothermal(
+                    centre=(1.0, 1.0), einstein_radius=2.0
+                ),
+            )
+
+            tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1])
+
+            caustic_radial_from_magnification = tracer.radial_caustic_from_grid(grid=grid)
+
+            caustic_radial_from_lambda_t = radial_caustic_from_eigenvalue(tracer=tracer, grid=grid)
+
+            assert sum(caustic_radial_from_lambda_t) == pytest.approx(
+                sum(caustic_radial_from_magnification), 1e-2
+            )
+
+        ## not passing when tracer has galaxies at more than one redshift..
+        ## critical curve seems to work from magnification but not from eigen value?
+
+        def test__compare_tangential_critical_curves_from_magnification_and_lambda_t__two_redshift_tracer(
+           self
+         ):
             grid = grids.Grid.from_shape_pixel_scale_and_sub_grid_size(
                 shape=(100, 100), pixel_scale=0.05, sub_grid_size=1
             )
@@ -2500,20 +2678,16 @@ class TestAbstractTracerLensing(object):
             g2 = g.Galaxy(
                 redshift=1.0,
                 mass_profile=mp.SphericalIsothermal(
-                    centre=(-1.0, 1.0), einstein_radius=3.0)
+                    centre=(1.0, -1.0), einstein_radius=2.0
+                ),
             )
 
             tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1, g2])
 
-            critical_curve_tangential_from_magnification = critical_curve_via_magnification_from_tracer_and_grid(
-                tracer=tracer, grid=grid
-            )[
-                0
-            ]
+            critical_curve_tangential_from_magnification = tracer.tangential_critical_curve_from_grid(grid=grid)
 
-            critical_curve_tangential_from_lambda_t = tracer.critical_curves_from_grid(
-                grid=grid
-            )[0]
+            critical_curve_tangential_from_lambda_t = tangential_critical_curve_from_eigenvalue(
+                tracer=tracer, grid=grid)
 
             assert critical_curve_tangential_from_lambda_t == pytest.approx(
                 critical_curve_tangential_from_magnification, 1e-4
@@ -2525,15 +2699,10 @@ class TestAbstractTracerLensing(object):
 
             tracer = ray_tracing.Tracer.from_galaxies(galaxies=[g0, g1, g2])
 
-            critical_curve_tangential_from_magnification = critical_curve_via_magnification_from_tracer_and_grid(
-                tracer=tracer, grid=grid
-            )[
-                0
-            ]
+            critical_curve_tangential_from_magnification = tracer.tangential_critical_curve_from_grid(grid=grid)
 
-            critical_curve_tangential_from_lambda_t = tracer.critical_curves_from_grid(
-                grid=grid
-            )[0]
+            critical_curve_tangential_from_lambda_t = tangential_critical_curve_from_eigenvalue(
+                tracer=tracer, grid=grid)
 
             assert critical_curve_tangential_from_lambda_t == pytest.approx(
                 critical_curve_tangential_from_magnification, 1e-4

@@ -478,39 +478,39 @@ class AbstractTracerLensing(AbstractTracerCosmology):
 
         return 1 / det_jacobian
 
-    def tangential_critical_curve_from_grid(self, grid):
+    def critical_curves_from_grid(self, grid):
 
-        lambda_tangential_2d = self.tangential_eigen_value_from_grid(
+        magnification_2d = self.magnification_from_grid(
             grid=grid, return_in_2d=True, return_binned=False
         )
 
-        tangential_critical_curve_indices = measure.find_contours(
-            lambda_tangential_2d, 0
-        )
-        print(tangential_critical_curve_indices)
+        inverse_magnification_2d = 1 / magnification_2d
 
-        if tangential_critical_curve_indices == []:
-            return []
+        critical_curves_indices = measure.find_contours(inverse_magnification_2d, 0)
 
-        return grid.marching_squares_grid_pixels_to_grid_arcsec(
-            grid_pixels=tangential_critical_curve_indices[0],
-            shape=lambda_tangential_2d.shape,
-        )
+        no_critical_curves = len(critical_curves_indices)
+        contours = []
+        critical_curves = []
+
+        for jj in np.arange(no_critical_curves):
+            contours.append(critical_curves_indices[jj])
+            contour_x, contour_y = contours[jj].T
+            pixel_coord = np.stack((contour_x, contour_y), axis=-1)
+
+            critical_curve = grid.marching_squares_grid_pixels_to_grid_arcsec(
+                grid_pixels=pixel_coord, shape=magnification_2d.shape
+            )
+
+            critical_curves.append(critical_curve)
+
+        return critical_curves
+
+
+    def tangential_critical_curve_from_grid(self, grid):
+        return self.critical_curves_from_grid(grid=grid)[0]
 
     def radial_critical_curve_from_grid(self, grid):
-
-        lambda_radial_2d = self.radial_eigen_value_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
-        )
-
-        radial_critical_curve_indices = measure.find_contours(lambda_radial_2d, 0)
-
-        if radial_critical_curve_indices == []:
-            return []
-
-        return grid.marching_squares_grid_pixels_to_grid_arcsec(
-            grid_pixels=radial_critical_curve_indices[0], shape=lambda_radial_2d.shape
-        )
+        return self.critical_curves_from_grid(grid=grid)[1]
 
     def tangential_caustic_from_grid(self, grid):
 
@@ -537,12 +537,6 @@ class AbstractTracerLensing(AbstractTracerCosmology):
         )
 
         return radial_critical_curve - deflections_1d
-
-    def critical_curves_from_grid(self, grid):
-        return [
-            self.tangential_critical_curve_from_grid(grid=grid),
-            self.radial_critical_curve_from_grid(grid=grid),
-        ]
 
     def caustics_from_grid(self, grid):
         return [
