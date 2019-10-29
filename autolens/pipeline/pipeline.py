@@ -1,7 +1,7 @@
 import autofit as af
 from autolens import exc
-from autolens.model.inversion import pixelizations as pix
-from autolens.model.inversion import regularization as reg
+from autoarray.operators.inversion import pixelizations as pix
+from autoarray.operators.inversion import regularization as reg
 
 
 class PipelineSettings(object):
@@ -79,7 +79,7 @@ class PipelineImaging(af.Pipeline):
         if self.hyper_mode and mask is None:
             raise exc.PhaseException(
                 "The pipeline is running in hyper_galaxies mode, but has not received an input mask. Add"
-                "a mask to the run function of the pipeline (e.g. pipeline.run(instrument=instrument, mask=mask)"
+                "a mask to the run function of the pipeline (e.g. pipeline.run(data_type=data_type, mask=mask)"
             )
 
         def runner(phase, results):
@@ -89,10 +89,10 @@ class PipelineImaging(af.Pipeline):
 
 
 class PipelinePositions(af.Pipeline):
-    def run(self, positions, pixel_scale):
+    def run(self, positions, pixel_scales):
         def runner(phase, results):
             return phase.run(
-                positions=positions, pixel_scale=pixel_scale, results=results
+                positions=positions, pixel_scales=pixel_scales, results=results
             )
 
         return self.run_function(runner)

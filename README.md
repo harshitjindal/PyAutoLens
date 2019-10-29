@@ -16,13 +16,7 @@ With **PyAutoLens**, you can begin modeling a lens in just a couple of minutes. 
 
 ```python
 import autofit as af
-from autolens.pipeline.phase import phase_imaging
-from autolens.array import mask as msk
-from autolens.model.galaxy import galaxy_model as gm
-from autolens.data.instrument import ccd
-from autolens.model.profiles import light_profiles as lp
-from autolens.model.profiles import mass_profiles as mp
-from autolens.lens.plotters import lens_fit_plotters
+import autolens as al
 
 import os
 
@@ -31,37 +25,35 @@ data_path = '{}/../data/'.format(os.path.dirname(os.path.realpath(__file__)))
 
 lens_name = 'example_lens'
 
-# Get the relative path to the data in our workspace & load the ccd imaging data.
-ccd_data = ccd.load_ccd_data_from_fits(
+# Get the relative path to the data in our workspace & load the imaging data.
+imaging = aa.imaging.from_fits(
     image_path=data_path + lens_name + '/image.fits',
     psf_path=data_path+lens_name+'/psf.fits',
     noise_map_path=data_path+lens_name+'/noise_map.fits', 
-    pixel_scale=0.1)
+    pixel_scales=0.1)
 
 # Create a mask for the data, which we setup as a 3.0" circle.
-mask = msk.Mask.circular(shape=ccd_data.shape, pixel_scale=ccd_data.pixel_scale, radius_arcsec=3.0)
+mask = aa.mask.circular(shape=imaging.shape, pixel_scales=imaging.pixel_scales, radius_arcsec=3.0)
 
 # We model our lens galaxy using a mass profile (a singular isothermal ellipsoid) & our source galaxy 
-# a light profile (an elliptical Sersic). We load these profiles from the 'light_profiles (lp)' & 
-# 'mass_profiles (mp)' modules.
-lens_mass_profile = mp.EllipticalIsothermal
-source_light_profile = lp.EllipticalSersic
+# a light profile (an elliptical Sersic).
+lens_mass_profile = al.mp.EllipticalIsothermal
+source_light_profile = al.lp.EllipticalSersic
 
 # To setup our model galaxies, we use the GalaxyModel class, which represents a galaxy whose parameters 
 # are variable & fitted for by PyAutoLens. The galaxies are also assigned redshifts.
-lens_galaxy_model = gm.GalaxyModel(redshift=0.5, mass=lens_mass_profile)
-source_galaxy_model = gm.GalaxyModel(redshift=1.0, light=source_light_profile)
+lens_galaxy_model = al.GalaxyModel(redshift=0.5, mass=lens_mass_profile)
+source_galaxy_model = al.GalaxyModel(redshift=1.0, light=source_light_profile)
 
-# To perform the analysis, we set up a phase using the 'phase' module (imported as 'ph').
-# A phase takes our galaxy models & fits their parameters using a non-linear search 
-# (in this case, MultiNest).
-phase = phase_imaging.PhaseImaging(
+# To perform the analysis we set up a phase, which takes our galaxy models & fits their parameters using a non-linear
+# search (in this case, MultiNest).
+phase = al.PhaseImaging(
     galaxies=dict(lens=lens_galaxy_model, source=source_galaxy_model),
     phase_name='example/phase_example', optimizer_class=af.MultiNest)
 
-# We pass the ccd data and maskto the phase, thereby fitting it with the lens model above & plot the resulting fit.
-result = phase.run(data=ccd_data, mask=mask)
-lens_fit_plotters.plot_fit_subplot(fit=result.most_likely_fit)
+# We pass the imaging data and mask to the phase, thereby fitting it with the lens model above & plot the resulting fit.
+result = phase.run(data=imaging, mask=mask)
+al.lens_fit_plotters.plot_fit_subplot(fit=result.most_likely_fit)
 ```
 
 ## Slack
@@ -76,7 +68,7 @@ Unfortunately, Slack is invitation-only, so first send me an [email](https://git
 
 - **Galaxies** - Use light & mass profiles to make galaxies & perform lensing calculations.
 - **Pipelines** - Write automated analysis pipelines to fit complex lens models to large samples of strong lenses.
-- **Extended Sources** - Reconstruct complex source galaxy morphologies on a variety of pixel-grids.
+- **Extended Sources** - Reconstruct complex source galaxy morphologies on a variety of pixel-aa.
 - **Adaption** - Adapt the lensing analysis to the features of the observed strong lens imaging.
 - **Multi-Plane** - Perform multi-plane ray-tracing & model multi-plane lens systems.
 - **Visualization** - Custom visualization libraries for plotting physical lensing quantities & modeling results.
@@ -173,12 +165,12 @@ export WORKSPACE=/path/to/autolens_workspace/
 
 Set PYTHONPATH to include the autolens_workspace directory:
 ```
-export PYTHONPATH=/path/to/autolens_workspace/
+export PYTHONPATH=/path/to/autolens_workspace
 ```
 
 You can test everything is working by running the example pipeline runner in the autolens_workspace
 ```
-python3 /path/to/autolens_workspace/runners/simple/runner_lens_mass_&_source.py
+python3 /path/to/autolens_workspace/runners/simple/runner__lens_sie__source_inversion.py
 ```
 
 ## Support & Discussion
@@ -192,6 +184,10 @@ If you have any suggestions or would like to contribute please get in touch.
 ## Publications
 
 The following papers use **PyAutoLens**:
+
+[Likelihood-free MCMC with Amortized Approximate Likelihood Ratios](https://arxiv.org/abs/1903.04057)
+
+[Deep Learning the Morphology of Dark Matter Substructure](https://arxiv.org/abs/1909.07346)
 
 [The molecular-gas properties in the gravitationally lensed merger HATLAS J142935.3-002836](https://arxiv.org/abs/1904.00307)
 
@@ -214,6 +210,8 @@ The following papers use **PyAutoLens**:
 [Amy Etherington](https://github.com/amyetherington) - Magnification, Critical Curves and Caustic Calculations.
 
 [Xiaoyue Cao](https://github.com/caoxiaoyue) - Analytic Ellipitcal Power-Law Deflection Angle Calculations.
+
+[Qiuhan He] - NFW Profile Lensing Calculations.
 
 [Nan Li](https://github.com/linan7788626) - Docker integration & support.
 

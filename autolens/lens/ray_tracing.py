@@ -2,19 +2,12 @@ import numpy as np
 from astropy import cosmology as cosmo
 from skimage import measure
 
-from autolens import exc
-from autolens.array import grids
+from autoarray.structures import grids
+from autoarray.operators.inversion import inversions as inv
+from autoastro.util import cosmology_util
+from autoastro.galaxy import galaxy as g
 from autolens.lens import plane as pl
 from autolens.lens.util import lens_util
-from autolens.model import cosmology_util
-from autolens.model.inversion import inversions as inv
-from autolens.model.galaxy import galaxy as g
-
-from autolens.array.grids import (
-    reshape_array_from_grid,
-    reshape_array_from_grid,
-    reshape_returned_grid,
-)
 
 
 class AbstractTracer(object):
@@ -35,7 +28,7 @@ class AbstractTracer(object):
         galaxies : [Galaxy]
             The list of galaxies in the ray-tracing calculation.
         image_plane_grid : grid_stacks.GridStack
-            The image-plane grid stack which is traced. (includes the grid, sub-grid, blurring-grid, etc.).
+            The image-plane al.ogrid which is traced. (includes the grid, sub-grid, blurring-grid, etc.).
         border : masks.GridBorder
             The border of the grid, which is used to relocate demagnified traced pixels to the \
             source-plane borders.
@@ -116,9 +109,9 @@ class AbstractTracer(object):
         return [plane.regularization for plane in self.planes]
 
     @property
-    def hyper_galaxy_image_1d_of_planes_with_pixelizations(self):
+    def hyper_galaxy_image_of_planes_with_pixelizations(self):
         return [
-            plane.binned_hyper_galaxy_image_1d_of_galaxy_with_pixelization
+            plane.hyper_galaxy_image_of_galaxy_with_pixelization
             for plane in self.planes
         ]
 
@@ -198,11 +191,9 @@ class AbstractTracerLensing(AbstractTracerCosmology):
     def __init__(self, planes, cosmology):
         super(AbstractTracerLensing, self).__init__(planes=planes, cosmology=cosmology)
 
-    def traced_grids_of_planes_from_grid(
-        self, grid, return_in_2d=True, plane_index_limit=None
-    ):
+    def traced_grids_of_planes_from_grid(self, grid, plane_index_limit=None):
 
-        grid_calc = grid.copy()
+        grid_calc = grid.copy()  # TODO looks unnecessary? Probably pretty expensive too
 
         traced_grids = []
         traced_deflections = []
@@ -233,55 +224,45 @@ class AbstractTracerLensing(AbstractTracerCosmology):
                 if plane_index == plane_index_limit:
                     return traced_grids
 
-            traced_deflections.append(
-                plane.deflections_from_grid(
-                    grid=scaled_grid, return_in_2d=False, return_binned=False
-                )
-            )
+            traced_deflections.append(plane.deflections_from_grid(grid=scaled_grid))
 
         return traced_grids
 
     def traced_positions_of_planes_from_positions(self, positions):
 
-        traced_positions = []
+        traced_positions_of_planes = [[] for i in range(self.total_planes)]
 
         for position_grid in positions:
-            traced_positions.append(
-                self.traced_grids_of_planes_from_grid(grid=position_grid)
+            traced_position_grids_of_planes = self.traced_grids_of_planes_from_grid(
+                grid=position_grid
             )
+            for (plane_index, tracer_position_grid_of_plane) in enumerate(
+                traced_position_grids_of_planes
+            ):
+                traced_positions_of_planes[plane_index].append(
+                    traced_position_grids_of_planes[plane_index]
+                )
 
-        return traced_positions
+        return traced_positions_of_planes
 
-    def deflections_between_planes_from_grid(
-        self, grid, plane_i=0, plane_j=-1, return_in_2d=True
-    ):
+    def deflections_between_planes_from_grid(self, grid, plane_i=0, plane_j=-1):
 
-        traced_grids_of_planes = self.traced_grids_of_planes_from_grid(
-            grid=grid, return_in_2d=return_in_2d
-        )
+        traced_grids_of_planes = self.traced_grids_of_planes_from_grid(grid=grid)
 
         return traced_grids_of_planes[plane_i] - traced_grids_of_planes[plane_j]
 
-    @reshape_array_from_grid
-    def profile_image_from_grid(self, grid, return_in_2d=True, return_binned=True):
-        return sum(
-            self.profile_images_of_planes_from_grid(
-                grid=grid, return_in_2d=False, return_binned=False
-            )
-        )
+    def profile_image_from_grid(self, grid):
+        profile_image = sum(self.profile_images_of_planes_from_grid(grid=grid))
+        return grid.mapping.array_from_sub_array_1d(sub_array_1d=profile_image)
 
-    def profile_images_of_planes_from_grid(
-        self, grid, return_in_2d=True, return_binned=True
-    ):
+    def profile_images_of_planes_from_grid(self, grid):
         traced_grids_of_planes = self.traced_grids_of_planes_from_grid(
             grid=grid, plane_index_limit=self.upper_plane_index_with_light_profile
         )
 
         profile_images_of_planes = [
             self.planes[plane_index].profile_image_from_grid(
-                grid=traced_grids_of_planes[plane_index],
-                return_in_2d=return_in_2d,
-                return_binned=return_binned,
+                grid=traced_grids_of_planes[plane_index]
             )
             for plane_index in range(len(traced_grids_of_planes))
         ]
@@ -290,238 +271,186 @@ class AbstractTracerLensing(AbstractTracerCosmology):
             for plane_index in range(
                 self.upper_plane_index_with_light_profile, self.total_planes - 1
             ):
+
                 profile_images_of_planes.append(
-                    np.zeros(shape=profile_images_of_planes[0].shape)
+                    grid.mapping.array_from_sub_array_1d(
+                        sub_array_1d=np.zeros(shape=profile_images_of_planes[0].shape)
+                    )
                 )
 
         return profile_images_of_planes
 
-    def padded_profile_image_2d_from_grid_and_psf_shape(self, grid, psf_shape):
+    def padded_profile_image_from_grid_and_psf_shape(self, grid, psf_shape):
 
-        padded_grid = grid.padded_grid_from_psf_shape(psf_shape=psf_shape)
+        padded_grid = grid.padded_grid_from_kernel_shape(kernel_shape=psf_shape)
 
-        return self.profile_image_from_grid(
-            grid=padded_grid, return_in_2d=True, return_binned=True
+        return self.profile_image_from_grid(grid=padded_grid)
+
+    def convergence_from_grid(self, grid):
+        convergence = sum(
+            [plane.convergence_from_grid(grid=grid) for plane in self.planes]
+        )
+        return grid.mapping.array_from_sub_array_1d(sub_array_1d=convergence)
+
+    def potential_from_grid(self, grid):
+        potential = sum([plane.potential_from_grid(grid=grid) for plane in self.planes])
+        return grid.mapping.array_from_sub_array_1d(sub_array_1d=potential)
+
+    def deflections_from_grid(self, grid):
+        deflections = sum(
+            [plane.deflections_from_grid(grid=grid) for plane in self.planes]
+        )
+        return grid.mapping.grid_from_sub_grid_1d(sub_grid_1d=deflections)
+
+    def deflections_via_potential_from_grid(self, grid):
+        potential = self.potential_from_grid(grid=grid)
+
+        deflections_y_2d = np.gradient(potential.in_2d, grid.in_2d[:, 0, 0], axis=0)
+        deflections_x_2d = np.gradient(potential.in_2d, grid.in_2d[0, :, 1], axis=1)
+
+        return grid.mapping.grid_from_sub_grid_2d(
+            sub_grid_2d=np.stack((deflections_y_2d, deflections_x_2d), axis=-1)
         )
 
-    @reshape_array_from_grid
-    def convergence_from_grid(self, grid, return_in_2d=True, return_binned=True):
-        return sum(
-            [
-                plane.convergence_from_grid(
-                    grid=grid, return_in_2d=False, return_binned=False
-                )
-                for plane in self.planes
-            ]
+    def jacobian_a11_from_grid(self, grid):
+
+        deflections = self.deflections_between_planes_from_grid(grid=grid)
+
+        return grid.mapping.array_from_sub_array_2d(
+            sub_array_2d=1.0
+            - np.gradient(deflections.in_2d[:, :, 1], grid.in_2d[0, :, 1], axis=1)
         )
 
-    @reshape_array_from_grid
-    def potential_from_grid(self, grid, return_in_2d=True, return_binned=True):
-        return sum(
-            [
-                plane.potential_from_grid(
-                    grid=grid, return_in_2d=False, return_binned=False
-                )
-                for plane in self.planes
-            ]
+    def jacobian_a12_from_grid(self, grid):
+
+        deflections = self.deflections_from_grid(grid=grid)
+
+        return grid.mapping.array_from_sub_array_2d(
+            sub_array_2d=-1.0
+            * np.gradient(deflections.in_2d[:, :, 1], grid.in_2d[:, 0, 0], axis=0)
         )
 
-    @reshape_returned_grid
-    def deflections_from_grid(self, grid, return_in_2d=True, return_binned=True):
-        return sum(
-            [
-                plane.deflections_from_grid(
-                    grid=grid, return_in_2d=False, return_binned=False
-                )
-                for plane in self.planes
-            ]
+    def jacobian_a21_from_grid(self, grid):
+
+        deflections = self.deflections_from_grid(grid=grid)
+
+        return grid.mapping.array_from_sub_array_2d(
+            sub_array_2d=-1.0
+            * np.gradient(deflections.in_2d[:, :, 0], grid.in_2d[0, :, 1], axis=1)
         )
 
-    @reshape_returned_grid
-    def deflections_via_potential_from_grid(
-            self, grid, return_in_2d=True, return_binned=True
-    ):
-        potential_2d = self.potential_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
+    def jacobian_a22_from_grid(self, grid):
+
+        deflections = self.deflections_from_grid(grid=grid)
+
+        return grid.mapping.array_from_sub_array_2d(
+            sub_array_2d=1
+            - np.gradient(deflections.in_2d[:, :, 0], grid.in_2d[:, 0, 0], axis=0)
         )
 
-        deflections_y_2d = np.gradient(potential_2d, grid.in_2d[:, 0, 0], axis=0)
-        deflections_x_2d = np.gradient(potential_2d, grid.in_2d[0, :, 1], axis=1)
+    def jacobian_from_grid(self, grid):
 
-        return np.stack((deflections_y_2d, deflections_x_2d), axis=-1)
+        a11 = self.jacobian_a11_from_grid(grid=grid)
 
-    @reshape_array_from_grid
-    def lensing_jacobian_a11_from_grid(
-            self, grid, return_in_2d=True, return_binned=True
-    ):
+        a12 = self.jacobian_a12_from_grid(grid=grid)
 
-        deflections_2d = self.deflections_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
+        a21 = self.jacobian_a21_from_grid(grid=grid)
+
+        a22 = self.jacobian_a22_from_grid(grid=grid)
+
+        return [[a11, a12], [a21, a22]]
+
+    def convergence_via_jacobian_from_grid(self, grid):
+
+        jacobian = self.jacobian_from_grid(grid=grid)
+
+        convergence = 1 - 0.5 * (jacobian[0][0] + jacobian[1][1])
+
+        return grid.mapping.array_from_sub_array_1d(sub_array_1d=convergence)
+
+    def shear_via_jacobian_from_grid(self, grid):
+
+        jacobian = self.jacobian_from_grid(grid=grid)
+
+        gamma_1 = 0.5 * (jacobian[1][1] - jacobian[0][0])
+        gamma_2 = -0.5 * (jacobian[0][1] + jacobian[1][0])
+
+        return grid.mapping.array_from_sub_array_1d(
+            sub_array_1d=(gamma_1 ** 2 + gamma_2 ** 2) ** 0.5
         )
 
-        return 1.0 - np.gradient(deflections_2d[:, :, 1], grid.in_2d[0, :, 1], axis=1)
+    def tangential_eigen_value_from_grid(self, grid):
 
-    @reshape_array_from_grid
-    def lensing_jacobian_a12_from_grid(
-            self, grid, return_in_2d=True, return_binned=True
-    ):
+        convergence = self.convergence_via_jacobian_from_grid(grid=grid)
 
-        deflections_2d = self.deflections_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
+        shear = self.shear_via_jacobian_from_grid(grid=grid)
+
+        return grid.mapping.array_from_sub_array_1d(
+            sub_array_1d=1 - convergence - shear
         )
 
-        return -1.0 * np.gradient(deflections_2d[:, :, 1], grid.in_2d[:, 0, 0], axis=0)
+    def radial_eigen_value_from_grid(self, grid):
 
-    @reshape_array_from_grid
-    def lensing_jacobian_a21_from_grid(
-            self, grid, return_in_2d=True, return_binned=True
-    ):
+        convergence = self.convergence_via_jacobian_from_grid(grid=grid)
 
-        deflections_2d = self.deflections_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
+        shear = self.shear_via_jacobian_from_grid(grid=grid)
+
+        return grid.mapping.array_from_sub_array_1d(
+            sub_array_1d=1 - convergence + shear
         )
 
-        return -1.0 * np.gradient(deflections_2d[:, :, 0], grid.in_2d[0, :, 1], axis=1)
+    def magnification_from_grid(self, grid):
 
-    @reshape_array_from_grid
-    def lensing_jacobian_a22_from_grid(
-            self, grid, return_in_2d=True, return_binned=True
-    ):
+        jacobian = self.jacobian_from_grid(grid=grid)
 
-        deflections_2d = self.deflections_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
-        )
+        det_jacobian = jacobian[0][0] * jacobian[1][1] - jacobian[0][1] * jacobian[1][0]
 
-        return 1 - np.gradient(deflections_2d[:, :, 0], grid.in_2d[:, 0, 0], axis=0)
-
-    def lensing_jacobian_from_grid(self, grid, return_in_2d=True, return_binned=True):
-
-        a11 = self.lensing_jacobian_a11_from_grid(
-            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
-        )
-
-        a12 = self.lensing_jacobian_a12_from_grid(
-            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
-        )
-
-        a21 = self.lensing_jacobian_a21_from_grid(
-            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
-        )
-
-        a22 = self.lensing_jacobian_a22_from_grid(
-            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
-        )
-
-        return np.array([[a11, a12], [a21, a22]])
-
-    @reshape_array_from_grid
-    def convergence_via_jacobian_from_grid(
-            self, grid, return_in_2d=True, return_binned=True
-    ):
-
-        jacobian = self.lensing_jacobian_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        convergence = 1 - 0.5 * (jacobian[0, 0] + jacobian[1, 1])
-
-        return convergence
-
-    @reshape_array_from_grid
-    def shear_via_jacobian_from_grid(self, grid, return_in_2d=True, return_binned=True):
-
-        jacobian = self.lensing_jacobian_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
-        )
-
-        gamma_1 = 0.5 * (jacobian[1, 1] - jacobian[0, 0])
-        gamma_2 = -0.5 * (jacobian[0, 1] + jacobian[1, 0])
-
-        return (gamma_1 ** 2 + gamma_2 ** 2) ** 0.5
-
-    @reshape_array_from_grid
-    def tangential_eigen_value_from_grid(
-            self, grid, return_in_2d=True, return_binned=True
-    ):
-
-        convergence = self.convergence_via_jacobian_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        shear = self.shear_via_jacobian_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        return 1 - convergence - shear
-
-    @reshape_array_from_grid
-    def radial_eigen_value_from_grid(self, grid, return_in_2d=True, return_binned=True):
-
-        convergence = self.convergence_via_jacobian_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        shear = self.shear_via_jacobian_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        return 1 - convergence + shear
-
-    @reshape_array_from_grid
-    def magnification_from_grid(self, grid, return_in_2d=True, return_binned=True):
-
-        jacobian = self.lensing_jacobian_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        det_jacobian = jacobian[0, 0] * jacobian[1, 1] - jacobian[0, 1] * jacobian[1, 0]
-
-        return 1 / det_jacobian
-
-    def critical_curves_from_grid(self, grid):
-
-        magnification_2d = self.magnification_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
-        )
-
-        inverse_magnification_2d = 1 / magnification_2d
-
-        critical_curves_indices = measure.find_contours(inverse_magnification_2d, 0)
-
-        no_critical_curves = len(critical_curves_indices)
-        contours = []
-        critical_curves = []
-
-        for jj in np.arange(no_critical_curves):
-            contours.append(critical_curves_indices[jj])
-            contour_x, contour_y = contours[jj].T
-            pixel_coord = np.stack((contour_x, contour_y), axis=-1)
-
-            critical_curve = grid.marching_squares_grid_pixels_to_grid_arcsec(
-                grid_pixels=pixel_coord, shape=magnification_2d.shape
-            )
-
-            critical_curves.append(critical_curve)
-
-        return critical_curves
-
+        return grid.mapping.array_from_sub_array_1d(sub_array_1d=1 / det_jacobian)
 
     def tangential_critical_curve_from_grid(self, grid):
-        return self.critical_curves_from_grid(grid=grid)[0]
+
+        tangential_eigen_values = self.tangential_eigen_value_from_grid(grid=grid)
+
+        tangential_critical_curve_indices = measure.find_contours(
+            tangential_eigen_values.in_2d, 0
+        )
+
+        if len(tangential_critical_curve_indices) == 0:
+            return []
+
+        tangential_critical_curve = grid.geometry.grid_arcsec_from_grid_pixels_1d_for_marching_squares(
+            grid_pixels_1d=tangential_critical_curve_indices[0],
+            shape_2d=tangential_eigen_values.sub_shape_2d,
+        )
+
+        return grids.IrregularGrid(grid=tangential_critical_curve)
 
     def radial_critical_curve_from_grid(self, grid):
-        return self.critical_curves_from_grid(grid=grid)[1]
+
+        radial_eigen_values = self.radial_eigen_value_from_grid(grid=grid)
+
+        radial_critical_curve_indices = measure.find_contours(
+            radial_eigen_values.in_2d, 0
+        )
+
+        if len(radial_critical_curve_indices) == 0:
+            return []
+
+        radial_critical_curve = grid.geometry.grid_arcsec_from_grid_pixels_1d_for_marching_squares(
+            grid_pixels_1d=radial_critical_curve_indices[0],
+            shape_2d=radial_eigen_values.sub_shape_2d,
+        )
+
+        return grids.IrregularGrid(grid=radial_critical_curve)
 
     def tangential_caustic_from_grid(self, grid):
 
         tangential_critical_curve = self.tangential_critical_curve_from_grid(grid=grid)
 
-        if tangential_critical_curve == []:
+        if len(tangential_critical_curve) == 0:
             return []
 
-        deflections_1d = self.deflections_from_grid(
-            grid=tangential_critical_curve, return_in_2d=False, return_binned=False
-        )
+        deflections_1d = self.deflections_from_grid(grid=tangential_critical_curve)
 
         return tangential_critical_curve - deflections_1d
 
@@ -529,14 +458,20 @@ class AbstractTracerLensing(AbstractTracerCosmology):
 
         radial_critical_curve = self.radial_critical_curve_from_grid(grid=grid)
 
-        if radial_critical_curve == []:
+        if len(radial_critical_curve) == 0:
             return []
 
-        deflections_1d = self.deflections_from_grid(
-            grid=radial_critical_curve, return_in_2d=False, return_binned=False
+        deflections_critical_curve = self.deflections_from_grid(
+            grid=radial_critical_curve
         )
 
-        return radial_critical_curve - deflections_1d
+        return radial_critical_curve - deflections_critical_curve
+
+    def critical_curves_from_grid(self, grid):
+        return [
+            self.tangential_critical_curve_from_grid(grid=grid),
+            self.radial_critical_curve_from_grid(grid=grid),
+        ]
 
     def caustics_from_grid(self, grid):
         return [
@@ -562,7 +497,7 @@ class AbstractTracerLensing(AbstractTracerCosmology):
 
         Parameters
         ----------
-        grid : ndsrray or grids.Grid
+        grid : ndsrray or aa.Grid
             The image-plane grid which is traced to the redshift.
         redshift : float
             The redshift the image-plane grid is traced to.
@@ -602,124 +537,118 @@ class AbstractTracerData(AbstractTracerLensing):
     def __init__(self, planes, cosmology):
         super(AbstractTracerData, self).__init__(planes=planes, cosmology=cosmology)
 
-    def blurred_profile_image_2d_of_planes_from_grid_and_convolver(
-        self, grid, convolver, preload_blurring_grid=None
-    ):
+    def blurred_profile_image_from_grid_and_psf(self, grid, psf, blurring_grid):
         """Extract the 1D image and 1D blurring image of every plane and blur each with the \
-        PSF using a convolver (see ccd.convolution) and then map them back to the 2D array of the original mask.
-
-        The blurred image of every plane is returned in 2D.
-
-        Parameters
-        ----------
-        convolver : hyper_galaxies.ccd.convolution.ConvolverImage
-            Class which performs the PSF convolution of a masked image in 1D.
-        """
-
-        blurred_profile_images_of_planes_1d = self.blurred_profile_image_1d_of_planes_from_grid_and_convolver(
-            grid=grid, convolver=convolver, preload_blurring_grid=preload_blurring_grid
-        )
-
-        return list(
-            map(
-                lambda blurred_profile_image_1d: grid.scaled_array_2d_from_array_1d(
-                    array_1d=blurred_profile_image_1d
-                ),
-                blurred_profile_images_of_planes_1d,
-            )
-        )
-
-    def blurred_profile_image_1d_from_grid_and_convolver(
-        self, grid, convolver, preload_blurring_grid=None
-    ):
-        """Extract the 1D image and 1D blurring image of every plane and blur each with the \
-        PSF using a convolver (see ccd.convolution).
+        PSF using a psf (see imaging.convolution).
 
         These are summed to give the tracer's overall blurred image in 1D.
 
         Parameters
         ----------
-        convolver : hyper_galaxies.ccd.convolution.ConvolverImage
+        psf : hyper_galaxies.imaging.convolution.ConvolverImage
             Class which performs the PSF convolution of a masked image in 1D.
         """
 
-        if preload_blurring_grid is None:
-            preload_blurring_grid = grid.blurring_grid_from_psf_shape(
-                psf_shape=convolver.psf.shape
-            )
+        profile_image = self.profile_image_from_grid(grid=grid)
 
-        if convolver.blurring_mask is None:
-            blurring_mask = grid.mask.blurring_mask_from_psf_shape(
-                psf_shape=convolver.psf.shape
-            )
-            convolver = convolver.convolver_with_blurring_mask_added(
-                blurring_mask=blurring_mask
-            )
+        blurring_image = self.profile_image_from_grid(grid=blurring_grid)
 
-        image_array = self.profile_image_from_grid(
-            grid=grid, return_in_2d=False, return_binned=True
-        )
-        blurring_array = self.profile_image_from_grid(
-            grid=preload_blurring_grid, return_in_2d=False, return_binned=True
+        return psf.convolved_array_from_array_2d_and_mask(
+            array_2d=profile_image.in_2d_binned + blurring_image.in_2d_binned,
+            mask=grid.mask,
         )
 
-        return convolver.convolve_image(
-            image_array=image_array, blurring_array=blurring_array
-        )
-
-    def blurred_profile_image_1d_of_planes_from_grid_and_convolver(
-        self, grid, convolver, preload_blurring_grid=None
+    def blurred_profile_images_of_planes_from_grid_and_psf(
+        self, grid, psf, blurring_grid
     ):
         """Extract the 1D image and 1D blurring image of every plane and blur each with the \
-        PSF using a convolver (see ccd.convolution).
+        PSF using a psf (see imaging.convolution).
 
         The blurred image of every plane is returned in 1D.
 
         Parameters
         ----------
-        convolver : hyper_galaxies.ccd.convolution.ConvolverImage
+        psf : hyper_galaxies.imaging.convolution.ConvolverImage
             Class which performs the PSF convolution of a masked image in 1D.
         """
 
-        if preload_blurring_grid is None:
-            preload_blurring_grid = grid.blurring_grid_from_psf_shape(
-                psf_shape=convolver.psf.shape
-            )
+        traced_grids_of_planes = self.traced_grids_of_planes_from_grid(grid=grid)
+        traced_blurring_grids_of_planes = self.traced_grids_of_planes_from_grid(
+            grid=blurring_grid
+        )
 
-        if convolver.blurring_mask is None:
-            blurring_mask = grid.mask.blurring_mask_from_psf_shape(
-                psf_shape=convolver.psf.shape
+        return [
+            plane.blurred_profile_image_from_grid_and_psf(
+                grid=traced_grids_of_planes[plane_index],
+                psf=psf,
+                blurring_grid=traced_blurring_grids_of_planes[plane_index],
             )
-            convolver = convolver.convolver_with_blurring_mask_added(
-                blurring_mask=blurring_mask
-            )
+            for (plane_index, plane) in enumerate(self.planes)
+        ]
+
+    def blurred_profile_image_from_grid_and_convolver(
+        self, grid, convolver, blurring_grid
+    ):
+        """Extract the 1D image and 1D blurring image of every plane and blur each with the \
+        PSF using a convolver (see imaging.convolution).
+
+        These are summed to give the tracer's overall blurred image in 1D.
+
+        Parameters
+        ----------
+        convolver : hyper_galaxies.imaging.convolution.ConvolverImage
+            Class which performs the PSF convolution of a masked image in 1D.
+        """
+
+        profile_image = self.profile_image_from_grid(grid=grid)
+
+        blurring_image = self.profile_image_from_grid(grid=blurring_grid)
+
+        return convolver.convolved_image_from_image_and_blurring_image(
+            image=profile_image, blurring_image=blurring_image
+        )
+
+    def blurred_profile_images_of_planes_from_grid_and_convolver(
+        self, grid, convolver, blurring_grid
+    ):
+        """Extract the 1D image and 1D blurring image of every plane and blur each with the \
+        PSF using a convolver (see imaging.convolution).
+
+        The blurred image of every plane is returned in 1D.
+
+        Parameters
+        ----------
+        convolver : hyper_galaxies.imaging.convolution.ConvolverImage
+            Class which performs the PSF convolution of a masked image in 1D.
+        """
 
         traced_grids_of_planes = self.traced_grids_of_planes_from_grid(grid=grid)
+        traced_blurring_grids_of_planes = self.traced_grids_of_planes_from_grid(
+            grid=blurring_grid
+        )
 
         return [
             plane.blurred_profile_image_from_grid_and_convolver(
-                grid=grid,
+                grid=traced_grids_of_planes[plane_index],
                 convolver=convolver,
-                preload_blurring_grid=preload_blurring_grid,
+                blurring_grid=traced_blurring_grids_of_planes[plane_index],
             )
-            for (plane, traced_grid) in zip(self.planes, traced_grids_of_planes)
+            for (plane_index, plane) in enumerate(self.planes)
         ]
 
     def unmasked_blurred_profile_image_from_grid_and_psf(self, grid, psf):
 
-        padded_grid = grid.padded_grid_from_psf_shape(psf_shape=psf.shape)
+        padded_grid = grid.padded_grid_from_kernel_shape(kernel_shape=psf.shape_2d)
 
-        padded_image_1d = self.profile_image_from_grid(
-            grid=padded_grid, return_in_2d=False, return_binned=True
-        )
+        padded_image = self.profile_image_from_grid(grid=padded_grid)
 
-        return padded_grid.unmasked_blurred_array_2d_from_padded_array_1d_psf_and_image_shape(
-            padded_array_1d=padded_image_1d, psf=psf, image_shape=grid.mask.shape
+        return padded_grid.mapping.unmasked_blurred_array_from_padded_array_psf_and_image_shape(
+            padded_array=padded_image, psf=psf, image_shape=grid.mask.shape
         )
 
     def unmasked_blurred_profile_image_of_planes_from_grid_and_psf(self, grid, psf):
 
-        padded_grid = grid.padded_grid_from_psf_shape(psf_shape=psf.shape)
+        padded_grid = grid.padded_grid_from_kernel_shape(kernel_shape=psf.shape_2d)
 
         traced_padded_grids = self.traced_grids_of_planes_from_grid(grid=padded_grid)
 
@@ -727,12 +656,10 @@ class AbstractTracerData(AbstractTracerLensing):
 
         for plane, traced_padded_grid in zip(self.planes, traced_padded_grids):
 
-            padded_image_1d = plane.profile_image_from_grid(
-                grid=traced_padded_grid, return_in_2d=False, return_binned=True
-            )
+            padded_image_1d = plane.profile_image_from_grid(grid=traced_padded_grid)
 
-            unmasked_blurred_array_2d = padded_grid.unmasked_blurred_array_2d_from_padded_array_1d_psf_and_image_shape(
-                padded_array_1d=padded_image_1d, psf=psf, image_shape=grid.mask.shape
+            unmasked_blurred_array_2d = padded_grid.mapping.unmasked_blurred_array_from_padded_array_psf_and_image_shape(
+                padded_array=padded_image_1d, psf=psf, image_shape=grid.mask.shape
             )
 
             unmasked_blurred_profile_images_of_planes.append(unmasked_blurred_array_2d)
@@ -745,20 +672,20 @@ class AbstractTracerData(AbstractTracerLensing):
 
         unmasked_blurred_profile_images_of_planes_and_galaxies = []
 
-        padded_grid = grid.padded_grid_from_psf_shape(psf_shape=psf.shape)
+        padded_grid = grid.padded_grid_from_kernel_shape(kernel_shape=psf.shape_2d)
 
         traced_padded_grids = self.traced_grids_of_planes_from_grid(grid=padded_grid)
 
         for plane, traced_padded_grid in zip(self.planes, traced_padded_grids):
 
             padded_image_1d_of_galaxies = plane.profile_images_of_galaxies_from_grid(
-                grid=traced_padded_grid, return_in_2d=False, return_binned=True
+                grid=traced_padded_grid
             )
 
             unmasked_blurred_array_2d_of_galaxies = list(
                 map(
-                    lambda padded_image_1d_of_galaxy: padded_grid.unmasked_blurred_array_2d_from_padded_array_1d_psf_and_image_shape(
-                        padded_array_1d=padded_image_1d_of_galaxy,
+                    lambda padded_image_1d_of_galaxy: padded_grid.mapping.unmasked_blurred_array_from_padded_array_psf_and_image_shape(
+                        padded_array=padded_image_1d_of_galaxy,
                         psf=psf,
                         image_shape=grid.mask.shape,
                     ),
@@ -772,60 +699,75 @@ class AbstractTracerData(AbstractTracerLensing):
 
         return unmasked_blurred_profile_images_of_planes_and_galaxies
 
-    def pixelization_grids_of_planes_from_grid(self, grid):
+    def profile_visibilities_from_grid_and_transformer(self, grid, transformer):
 
-        pixelization_grids_of_planes = []
+        profile_image = self.profile_image_from_grid(grid=grid)
+        return transformer.visibilities_from_image(image=profile_image)
 
-        for plane in self.planes:
-            pixelization_grid = plane.pixelization_grid_from_grid(grid=grid)
-            pixelization_grids_of_planes.append(pixelization_grid)
-
-        return pixelization_grids_of_planes
-
-    def traced_pixelization_grids_of_planes_from_grid(
-        self, grid, preload_pixelization_grids_of_planes=None
+    def profile_visibilities_of_planes_from_grid_and_transformer(
+        self, grid, transformer
     ):
 
-        if preload_pixelization_grids_of_planes is None:
+        profile_images_1d_of_planes = self.profile_images_of_planes_from_grid(grid=grid)
+        return [
+            transformer.visibilities_from_image(image=profile_image_1d)
+            for profile_image_1d in profile_images_1d_of_planes
+        ]
 
-            pixelization_grids_of_planes = self.pixelization_grids_of_planes_from_grid(
+    def sparse_image_plane_grids_of_planes_from_grid(self, grid):
+
+        sparse_image_plane_grids_of_planes = []
+
+        for plane in self.planes:
+            sparse_image_plane_grid = plane.sparse_image_plane_grid_from_grid(grid=grid)
+            sparse_image_plane_grids_of_planes.append(sparse_image_plane_grid)
+
+        return sparse_image_plane_grids_of_planes
+
+    def traced_sparse_grids_of_planes_from_grid(
+        self, grid, preload_sparse_grids_of_planes=None
+    ):
+
+        if preload_sparse_grids_of_planes is None:
+
+            sparse_image_plane_grids_of_planes = self.sparse_image_plane_grids_of_planes_from_grid(
                 grid=grid
             )
 
         else:
 
-            pixelization_grids_of_planes = preload_pixelization_grids_of_planes
+            sparse_image_plane_grids_of_planes = preload_sparse_grids_of_planes
 
-        traced_pixelization_grids_of_planes = []
+        traced_sparse_grids_of_planes = []
 
         for (plane_index, plane) in enumerate(self.planes):
 
-            if pixelization_grids_of_planes[plane_index] is None:
-                traced_pixelization_grids_of_planes.append(None)
+            if sparse_image_plane_grids_of_planes[plane_index] is None:
+                traced_sparse_grids_of_planes.append(None)
             else:
-                traced_pixelization_grids = self.traced_grids_of_planes_from_grid(
-                    grid=pixelization_grids_of_planes[plane_index]
+                traced_sparse_grids = self.traced_grids_of_planes_from_grid(
+                    grid=sparse_image_plane_grids_of_planes[plane_index]
                 )
-                traced_pixelization_grids_of_planes.append(
-                    traced_pixelization_grids[plane_index]
+                traced_sparse_grids_of_planes.append(
+                    traced_sparse_grids[plane_index]
                 )
 
-        return traced_pixelization_grids_of_planes
+        return traced_sparse_grids_of_planes
 
     def mappers_of_planes_from_grid(
         self,
         grid,
         inversion_uses_border=False,
-        preload_pixelization_grids_of_planes=None,
+        preload_sparse_grids_of_planes=None,
     ):
 
         mappers_of_planes = []
 
         traced_grids_of_planes = self.traced_grids_of_planes_from_grid(grid=grid)
 
-        traced_pixelization_grids_of_planes = self.traced_pixelization_grids_of_planes_from_grid(
+        traced_sparse_grids_of_planes = self.traced_sparse_grids_of_planes_from_grid(
             grid=grid,
-            preload_pixelization_grids_of_planes=preload_pixelization_grids_of_planes,
+            preload_sparse_grids_of_planes=preload_sparse_grids_of_planes,
         )
 
         for (plane_index, plane) in enumerate(self.planes):
@@ -833,127 +775,120 @@ class AbstractTracerData(AbstractTracerLensing):
             if not plane.has_pixelization:
                 mappers_of_planes.append(None)
             else:
-                mapper = plane.mapper_from_grid_and_pixelization_grid(
+                mapper = plane.mapper_from_grid_and_sparse_grid(
                     grid=traced_grids_of_planes[plane_index],
-                    pixelization_grid=traced_pixelization_grids_of_planes[plane_index],
+                    sparse_grid=traced_sparse_grids_of_planes[plane_index],
                     inversion_uses_border=inversion_uses_border,
                 )
                 mappers_of_planes.append(mapper)
 
         return mappers_of_planes
 
-    def inversion_from_grid_image_1d_noise_map_1d_and_convolver(
+    def inversion_imaging_from_grid_and_data(
         self,
         grid,
-        image_1d,
-        noise_map_1d,
+        image,
+        noise_map,
         convolver,
         inversion_uses_border=False,
-        preload_pixelization_grids_of_planes=None,
+        preload_sparse_grids_of_planes=None,
     ):
 
         mappers_of_planes = self.mappers_of_planes_from_grid(
             grid=grid,
             inversion_uses_border=inversion_uses_border,
-            preload_pixelization_grids_of_planes=preload_pixelization_grids_of_planes,
+            preload_sparse_grids_of_planes=preload_sparse_grids_of_planes,
         )
 
-        return inv.Inversion.from_data_1d_mapper_and_regularization(
-            image_1d=image_1d,
-            noise_map_1d=noise_map_1d,
+        return inv.InversionImaging.from_data_mapper_and_regularization(
+            image=image,
+            noise_map=noise_map,
             convolver=convolver,
             mapper=mappers_of_planes[-1],
             regularization=self.regularizations_of_planes[-1],
         )
 
-    def hyper_noise_map_1d_from_noise_map_1d(self, noise_map_1d):
-        hyper_noise_maps_1d = self.hyper_noise_maps_1d_of_planes_from_noise_map_1d(
-            noise_map_1d=noise_map_1d
+    def hyper_noise_map_from_noise_map(self, noise_map):
+        hyper_noise_maps = self.hyper_noise_maps_of_planes_from_noise_map(
+            noise_map=noise_map
         )
-        hyper_noise_maps_1d = [
-            hyper_noise_map
-            for hyper_noise_map in hyper_noise_maps_1d
-            if hyper_noise_map is not None
-        ]
-        return sum(hyper_noise_maps_1d)
+        return sum(hyper_noise_maps)
 
-    def hyper_noise_maps_1d_of_planes_from_noise_map_1d(self, noise_map_1d):
+    def hyper_noise_maps_of_planes_from_noise_map(self, noise_map):
         return [
-            plane.hyper_noise_map_1d_from_noise_map_1d(noise_map_1d=noise_map_1d)
+            plane.hyper_noise_map_from_noise_map(noise_map=noise_map)
             for plane in self.planes
         ]
 
-    def galaxy_image_dict_blank_images_from_grid(self, grid) -> {g.Galaxy: np.ndarray}:
+    def galaxy_profile_image_dict_from_grid(self, grid) -> {g.Galaxy: np.ndarray}:
         """
         A dictionary associating galaxies with their corresponding model images
         """
 
-        galaxy_image_dict = dict()
+        galaxy_profile_image_dict = dict()
 
-        for plane in self.planes:
-            for galaxy in plane.galaxies:
+        traced_grids_of_planes = self.traced_grids_of_planes_from_grid(grid=grid)
 
-                galaxy_image_dict[
-                    galaxy
-                ] = plane.profile_image_of_galaxy_from_grid_and_galaxy(
-                    grid=grid, galaxy=galaxy, return_in_2d=False, return_binned=True
-                )
+        for (plane_index, plane) in enumerate(self.planes):
+            profile_images_of_galaxies = plane.profile_images_of_galaxies_from_grid(
+                grid=traced_grids_of_planes[plane_index]
+            )
+            for (galaxy_index, galaxy) in enumerate(plane.galaxies):
+                galaxy_profile_image_dict[galaxy] = profile_images_of_galaxies[
+                    galaxy_index
+                ]
 
-        return galaxy_image_dict
+        return galaxy_profile_image_dict
 
-    def galaxy_image_dict_from_grid_and_convolver(
-        self, grid, convolver, preload_blurring_grid=None
+    def galaxy_blurred_profile_image_dict_from_grid_and_convolver(
+        self, grid, convolver, blurring_grid
     ) -> {g.Galaxy: np.ndarray}:
         """
         A dictionary associating galaxies with their corresponding model images
         """
 
-        if preload_blurring_grid is None:
-            preload_blurring_grid = grid.blurring_grid_from_psf_shape(
-                psf_shape=convolver.psf.shape
-            )
+        galaxy_blurred_profile_image_dict = dict()
 
-        if convolver.blurring_mask is None:
-            blurring_mask = grid.mask.blurring_mask_from_psf_shape(
-                psf_shape=convolver.psf.shape
-            )
-            convolver = convolver.convolver_with_blurring_mask_added(
-                blurring_mask=blurring_mask
-            )
+        traced_grids_of_planes = self.traced_grids_of_planes_from_grid(grid=grid)
 
-        galaxy_image_dict = dict()
-
-        traced_grids = self.traced_grids_of_planes_from_grid(
-            grid=grid, return_in_2d=False
-        )
-        traced_blurring_grids = self.traced_grids_of_planes_from_grid(
-            grid=preload_blurring_grid, return_in_2d=False
+        traced_blurring_grids_of_planes = self.traced_grids_of_planes_from_grid(
+            grid=blurring_grid
         )
 
-        for (plane, traced_grid, traced_blurring_grid) in zip(
-            self.planes, traced_grids, traced_blurring_grids
-        ):
-            for galaxy in plane.galaxies:
+        for (plane_index, plane) in enumerate(self.planes):
+            blurred_profile_images_of_galaxies = plane.blurred_profile_images_of_galaxies_from_grid_and_convolver(
+                grid=traced_grids_of_planes[plane_index],
+                convolver=convolver,
+                blurring_grid=traced_blurring_grids_of_planes[plane_index],
+            )
+            for (galaxy_index, galaxy) in enumerate(plane.galaxies):
+                galaxy_blurred_profile_image_dict[
+                    galaxy
+                ] = blurred_profile_images_of_galaxies[galaxy_index]
 
-                profile_image_1d = plane.profile_image_of_galaxy_from_grid_and_galaxy(
-                    grid=traced_grid,
-                    galaxy=galaxy,
-                    return_in_2d=False,
-                    return_binned=True,
-                )
+        return galaxy_blurred_profile_image_dict
 
-                profile_blurring_image_1d = plane.profile_image_of_galaxy_from_grid_and_galaxy(
-                    grid=traced_blurring_grid, galaxy=galaxy, return_in_2d=False
-                )
+    def galaxy_profile_visibilities_dict_from_grid_and_transformer(
+        self, grid, transformer
+    ) -> {g.Galaxy: np.ndarray}:
+        """
+        A dictionary associating galaxies with their corresponding model images
+        """
 
-                blurred_profile_image_1d = convolver.convolve_image(
-                    image_array=profile_image_1d,
-                    blurring_array=profile_blurring_image_1d,
-                )
+        galaxy_profile_visibilities_image_dict = dict()
 
-                galaxy_image_dict[galaxy] = blurred_profile_image_1d
+        traced_grids_of_planes = self.traced_grids_of_planes_from_grid(grid=grid)
 
-        return galaxy_image_dict
+        for (plane_index, plane) in enumerate(self.planes):
+            profile_visibilities_of_galaxies = plane.profile_visibilities_of_galaxies_from_grid_and_transformer(
+                grid=traced_grids_of_planes[plane_index], transformer=transformer
+            )
+            for (galaxy_index, galaxy) in enumerate(plane.galaxies):
+                galaxy_profile_visibilities_image_dict[
+                    galaxy
+                ] = profile_visibilities_of_galaxies[galaxy_index]
+
+        return galaxy_profile_visibilities_image_dict
 
 
 class Tracer(AbstractTracerData):
@@ -1007,7 +942,7 @@ class Tracer(AbstractTracerData):
         lens_galaxies : [Galaxy]
             The list of galaxies in the ray-tracing calculation.
         image_plane_grid : grid_stacks.GridStack
-            The image-plane grid stack which is traced. (includes the grid, sub-grid, blurring-grid, etc.).
+            The image-plane al.ogrid which is traced. (includes the grid, sub-grid, blurring-grid, etc.).
         planes_between_lenses : [int]
             The number of slices between each main plane. The first entry in this list determines the number of slices \
             between Earth (redshift 0.0) and main plane 0, the next between main planes 0 and 1, etc.

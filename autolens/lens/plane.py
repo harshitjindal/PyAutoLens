@@ -2,13 +2,12 @@ import numpy as np
 from astropy import cosmology as cosmo
 from skimage import measure
 
+from autoarray.structures import arrays, visibilities as vis, grids
 import autofit as af
-from autolens import exc, dimensions as dim
-from autolens.array import scaled_array
-from autolens.array.grids import reshape_array_from_grid, reshape_returned_grid
+from autoastro.util import cosmology_util
+from autolens import exc
+from autoastro import dimensions as dim
 from autolens.lens.util import lens_util
-from autolens.model import cosmology_util
-from autolens.array.util import grid_util
 
 
 class AbstractPlane(object):
@@ -99,10 +98,10 @@ class AbstractPlane(object):
             )
 
     @property
-    def binned_hyper_galaxy_image_1d_of_galaxy_with_pixelization(self):
+    def hyper_galaxy_image_of_galaxy_with_pixelization(self):
         galaxies_with_pixelization = self.galaxies_with_pixelization
         if galaxies_with_pixelization:
-            return galaxies_with_pixelization[0].binned_hyper_galaxy_image_1d
+            return galaxies_with_pixelization[0].hyper_galaxy_image
 
     @property
     def has_hyper_galaxy(self):
@@ -192,8 +191,7 @@ class AbstractPlaneLensing(AbstractPlaneCosmology):
             redshift=redshift, galaxies=galaxies, cosmology=cosmology
         )
 
-    @reshape_array_from_grid
-    def profile_image_from_grid(self, grid, return_in_2d=True, return_binned=True):
+    def profile_image_from_grid(self, grid):
         """Compute the profile-image plane image of the list of galaxies of the plane's sub-grid, by summing the
         individual images of each galaxy's light profile.
 
@@ -205,49 +203,27 @@ class AbstractPlaneLensing(AbstractPlaneCosmology):
 
         Parameters
         -----------
-        return_in_2d : bool
-            If *True*, the returned array is mapped to its unmasked 2D shape, if *False* it is the masked 1D shape.
-        return_binned : bool
-            If *True*, the returned array which is computed on a sub-grid is binned up to the grid dimensions \
-            by taking the mean of all sub-gridded values. If *False*, the array is returned on the dimensions of the \
-            sub-grid.
+
         """
         if self.galaxies:
-            return sum(
+            profile_image = sum(
                 map(
-                    lambda galaxy: galaxy.profile_image_from_grid(
-                        grid=grid, return_in_2d=False, return_binned=False
-                    ),
+                    lambda galaxy: galaxy.profile_image_from_grid(grid=grid),
                     self.galaxies,
                 )
             )
+            return grid.mapping.array_from_sub_array_1d(sub_array_1d=profile_image)
         else:
-            return np.full((grid.shape[0]), 0.0)
-
-    def profile_images_of_galaxies_from_grid(
-        self, grid, return_in_2d=True, return_binned=True
-    ):
-        return list(
-            map(
-                lambda galaxy: self.profile_image_of_galaxy_from_grid_and_galaxy(
-                    grid=grid,
-                    galaxy=galaxy,
-                    return_in_2d=return_in_2d,
-                    return_binned=return_binned,
-                ),
-                self.galaxies,
+            return grid.mapping.array_from_sub_array_1d(
+                sub_array_1d=np.zeros((grid.sub_shape_1d,))
             )
+
+    def profile_images_of_galaxies_from_grid(self, grid):
+        return list(
+            map(lambda galaxy: galaxy.profile_image_from_grid(grid=grid), self.galaxies)
         )
 
-    def profile_image_of_galaxy_from_grid_and_galaxy(
-        self, grid, galaxy, return_in_2d=True, return_binned=True
-    ):
-        return galaxy.profile_image_from_grid(
-            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
-        )
-
-    @reshape_array_from_grid
-    def convergence_from_grid(self, grid, return_in_2d=True, return_binned=True):
+    def convergence_from_grid(self, grid):
         """Compute the convergence of the list of galaxies of the plane's sub-grid, by summing the individual convergences \
         of each galaxy's mass profile.
 
@@ -264,27 +240,18 @@ class AbstractPlaneLensing(AbstractPlaneCosmology):
             potential is calculated on.
         galaxies : [galaxy.Galaxy]
             The galaxies whose mass profiles are used to compute the surface densities.
-        return_in_2d : bool
-            If *True*, the returned array is mapped to its unmasked 2D shape, if *False* it is the masked 1D shape.
-        return_binned : bool
-            If *True*, the returned array which is computed on a sub-grid is binned up to the grid dimensions \
-            by taking the mean of all sub-gridded values. If *False*, the array is returned on the dimensions of the \
-            sub-grid.
         """
         if self.galaxies:
-            return sum(
-                map(
-                    lambda g: g.convergence_from_grid(
-                        grid=grid, return_in_2d=False, return_binned=False
-                    ),
-                    self.galaxies,
-                )
+            convergence = sum(
+                map(lambda g: g.convergence_from_grid(grid=grid), self.galaxies)
             )
+            return grid.mapping.array_from_sub_array_1d(sub_array_1d=convergence)
         else:
-            return np.full((grid.shape[0]), 0.0)
+            return grid.mapping.array_from_sub_array_1d(
+                sub_array_1d=np.full((grid.sub_shape_1d), 0.0)
+            )
 
-    @reshape_array_from_grid
-    def potential_from_grid(self, grid, return_in_2d=True, return_binned=True):
+    def potential_from_grid(self, grid):
         """Compute the potential of the list of galaxies of the plane's sub-grid, by summing the individual potentials \
         of each galaxy's mass profile.
 
@@ -301,231 +268,183 @@ class AbstractPlaneLensing(AbstractPlaneCosmology):
             potential is calculated on.
         galaxies : [galaxy.Galaxy]
             The galaxies whose mass profiles are used to compute the surface densities.
-        return_in_2d : bool
-            If *True*, the returned array is mapped to its unmasked 2D shape, if *False* it is the masked 1D shape.
-        return_binned : bool
-            If *True*, the returned array which is computed on a sub-grid is binned up to the grid dimensions \
-            by taking the mean of all sub-gridded values. If *False*, the array is returned on the dimensions of the \
-            sub-grid.
         """
         if self.galaxies:
-            return sum(
-                map(
-                    lambda g: g.potential_from_grid(
-                        grid=grid, return_in_2d=False, return_binned=False
-                    ),
-                    self.galaxies,
-                )
+            potential = sum(
+                map(lambda g: g.potential_from_grid(grid=grid), self.galaxies)
             )
+            return grid.mapping.array_from_sub_array_1d(sub_array_1d=potential)
         else:
-            return np.full((grid.shape[0]), 0.0)
+            return grid.mapping.array_from_sub_array_1d(
+                sub_array_1d=np.full((grid.sub_shape_1d), 0.0)
+            )
 
-    @reshape_returned_grid
-    def deflections_from_grid(self, grid, return_in_2d=True, return_binned=True):
+    def deflections_from_grid(self, grid):
         if self.galaxies:
-            return sum(
-                map(
-                    lambda g: g.deflections_from_grid(
-                        grid=grid, return_in_2d=False, return_binned=False
-                    ),
-                    self.galaxies,
-                )
+            deflections = sum(
+                map(lambda g: g.deflections_from_grid(grid=grid), self.galaxies)
             )
+            return grid.mapping.grid_from_sub_grid_1d(sub_grid_1d=deflections)
         else:
-            return np.full((grid.shape[0], 2), 0.0)
+            return grid.mapping.grid_from_sub_grid_1d(
+                sub_grid_1d=np.full((grid.sub_shape_1d, 2), 0.0)
+            )
 
-    @reshape_returned_grid
-    def traced_grid_from_grid(self, grid, return_in_2d=True):
+    def traced_grid_from_grid(self, grid):
         """Trace this plane's grid_stacks to the next plane, using its deflection angles."""
 
-        return grid - self.deflections_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
+        traced_grid = grid - self.deflections_from_grid(grid=grid)
+        return grid.mapping.grid_from_sub_grid_1d(sub_grid_1d=traced_grid)
+
+    def deflections_via_potential_from_grid(self, grid):
+        potential = self.potential_from_grid(grid=grid)
+
+        deflections_y_2d = np.gradient(potential.in_2d, grid.in_2d[:, 0, 0], axis=0)
+        deflections_x_2d = np.gradient(potential.in_2d, grid.in_2d[0, :, 1], axis=1)
+
+        return grid.mapping.grid_from_sub_grid_2d(
+            sub_grid_2d=np.stack((deflections_y_2d, deflections_x_2d), axis=-1)
         )
 
-    @reshape_returned_grid
-    def deflections_via_potential_from_grid(
-        self, grid, return_in_2d=True, return_binned=True
-    ):
-        potential_2d = self.potential_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
+    def jacobian_a11_from_grid(self, grid):
+
+        deflections = self.deflections_from_grid(grid=grid)
+
+        return grid.mapping.array_from_sub_array_2d(
+            sub_array_2d=1.0
+            - np.gradient(deflections.in_2d[:, :, 1], grid.in_2d[0, :, 1], axis=1)
         )
 
-        deflections_y_2d = np.gradient(potential_2d, grid.in_2d[:, 0, 0], axis=0)
-        deflections_x_2d = np.gradient(potential_2d, grid.in_2d[0, :, 1], axis=1)
+    def jacobian_a12_from_grid(self, grid):
 
-        return np.stack((deflections_y_2d, deflections_x_2d), axis=-1)
+        deflections = self.deflections_from_grid(grid=grid)
 
-    @reshape_array_from_grid
-    def lensing_jacobian_a11_from_grid(
-        self, grid, return_in_2d=True, return_binned=True
-    ):
-
-        deflections_2d = self.deflections_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
+        return grid.mapping.array_from_sub_array_2d(
+            sub_array_2d=-1.0
+            * np.gradient(deflections.in_2d[:, :, 1], grid.in_2d[:, 0, 0], axis=0)
         )
 
-        return 1.0 - np.gradient(deflections_2d[:, :, 1], grid.in_2d[0, :, 1], axis=1)
+    def jacobian_a21_from_grid(self, grid):
 
-    @reshape_array_from_grid
-    def lensing_jacobian_a12_from_grid(
-        self, grid, return_in_2d=True, return_binned=True
-    ):
+        deflections = self.deflections_from_grid(grid=grid)
 
-        deflections_2d = self.deflections_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
+        return grid.mapping.array_from_sub_array_2d(
+            sub_array_2d=-1.0
+            * np.gradient(deflections.in_2d[:, :, 0], grid.in_2d[0, :, 1], axis=1)
         )
 
-        return -1.0 * np.gradient(deflections_2d[:, :, 1], grid.in_2d[:, 0, 0], axis=0)
+    def jacobian_a22_from_grid(self, grid):
 
-    @reshape_array_from_grid
-    def lensing_jacobian_a21_from_grid(
-        self, grid, return_in_2d=True, return_binned=True
-    ):
+        deflections = self.deflections_from_grid(grid=grid)
 
-        deflections_2d = self.deflections_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
+        return grid.mapping.array_from_sub_array_2d(
+            sub_array_2d=1
+            - np.gradient(deflections.in_2d[:, :, 0], grid.in_2d[:, 0, 0], axis=0)
         )
 
-        return -1.0 * np.gradient(deflections_2d[:, :, 0], grid.in_2d[0, :, 1], axis=1)
+    def jacobian_from_grid(self, grid):
 
-    @reshape_array_from_grid
-    def lensing_jacobian_a22_from_grid(
-        self, grid, return_in_2d=True, return_binned=True
-    ):
+        a11 = self.jacobian_a11_from_grid(grid=grid)
 
-        deflections_2d = self.deflections_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
+        a12 = self.jacobian_a12_from_grid(grid=grid)
+
+        a21 = self.jacobian_a21_from_grid(grid=grid)
+
+        a22 = self.jacobian_a22_from_grid(grid=grid)
+
+        return [[a11, a12], [a21, a22]]
+
+    def convergence_via_jacobian_from_grid(self, grid):
+
+        jacobian = self.jacobian_from_grid(grid=grid)
+
+        convergence = 1 - 0.5 * (jacobian[0][0] + jacobian[1][1])
+
+        return grid.mapping.array_from_sub_array_1d(sub_array_1d=convergence)
+
+    def shear_via_jacobian_from_grid(self, grid):
+
+        jacobian = self.jacobian_from_grid(grid=grid)
+
+        gamma_1 = 0.5 * (jacobian[1][1] - jacobian[0][0])
+        gamma_2 = -0.5 * (jacobian[0][1] + jacobian[1][0])
+
+        return grid.mapping.array_from_sub_array_1d(
+            sub_array_1d=(gamma_1 ** 2 + gamma_2 ** 2) ** 0.5
         )
 
-        return 1 - np.gradient(deflections_2d[:, :, 0], grid.in_2d[:, 0, 0], axis=0)
+    def tangential_eigen_value_from_grid(self, grid):
 
-    def lensing_jacobian_from_grid(self, grid, return_in_2d=True, return_binned=True):
+        convergence = self.convergence_via_jacobian_from_grid(grid=grid)
 
-        a11 = self.lensing_jacobian_a11_from_grid(
-            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
+        shear = self.shear_via_jacobian_from_grid(grid=grid)
+
+        return grid.mapping.array_from_sub_array_1d(
+            sub_array_1d=1 - convergence - shear
         )
 
-        a12 = self.lensing_jacobian_a12_from_grid(
-            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
+    def radial_eigen_value_from_grid(self, grid):
+
+        convergence = self.convergence_via_jacobian_from_grid(grid=grid)
+
+        shear = self.shear_via_jacobian_from_grid(grid=grid)
+
+        return grid.mapping.array_from_sub_array_1d(
+            sub_array_1d=1 - convergence + shear
         )
 
-        a21 = self.lensing_jacobian_a21_from_grid(
-            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
-        )
+    def magnification_from_grid(self, grid):
 
-        a22 = self.lensing_jacobian_a22_from_grid(
-            grid=grid, return_in_2d=return_in_2d, return_binned=return_binned
-        )
+        jacobian = self.jacobian_from_grid(grid=grid)
 
-        return np.array([[a11, a12], [a21, a22]])
+        det_jacobian = jacobian[0][0] * jacobian[1][1] - jacobian[0][1] * jacobian[1][0]
 
-    @reshape_array_from_grid
-    def convergence_via_jacobian_from_grid(
-        self, grid, return_in_2d=True, return_binned=True
-    ):
-
-        jacobian = self.lensing_jacobian_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        convergence = 1 - 0.5 * (jacobian[0, 0] + jacobian[1, 1])
-
-        return convergence
-
-    @reshape_array_from_grid
-    def shear_via_jacobian_from_grid(self, grid, return_in_2d=True, return_binned=True):
-
-        jacobian = self.lensing_jacobian_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
-        )
-
-        gamma_1 = 0.5 * (jacobian[1, 1] - jacobian[0, 0])
-        gamma_2 = -0.5 * (jacobian[0, 1] + jacobian[1, 0])
-
-        return (gamma_1 ** 2 + gamma_2 ** 2) ** 0.5
-
-    @reshape_array_from_grid
-    def tangential_eigen_value_from_grid(
-        self, grid, return_in_2d=True, return_binned=True
-    ):
-
-        convergence = self.convergence_via_jacobian_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        shear = self.shear_via_jacobian_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        return 1 - convergence - shear
-
-    @reshape_array_from_grid
-    def radial_eigen_value_from_grid(self, grid, return_in_2d=True, return_binned=True):
-
-        convergence = self.convergence_via_jacobian_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        shear = self.shear_via_jacobian_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        return 1 - convergence + shear
-
-    @reshape_array_from_grid
-    def magnification_from_grid(self, grid, return_in_2d=True, return_binned=True):
-
-        jacobian = self.lensing_jacobian_from_grid(
-            grid=grid, return_in_2d=False, return_binned=False
-        )
-
-        det_jacobian = jacobian[0, 0] * jacobian[1, 1] - jacobian[0, 1] * jacobian[1, 0]
-
-        return 1 / det_jacobian
+        return grid.mapping.array_from_sub_array_1d(sub_array_1d=1 / det_jacobian)
 
     def tangential_critical_curve_from_grid(self, grid):
 
-        lambda_tangential_2d = self.tangential_eigen_value_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
-        )
+        tangential_eigen_values = self.tangential_eigen_value_from_grid(grid=grid)
 
         tangential_critical_curve_indices = measure.find_contours(
-            lambda_tangential_2d, 0
+            tangential_eigen_values.in_2d, 0
         )
 
-        if tangential_critical_curve_indices == []:
+        if len(tangential_critical_curve_indices) == 0:
             return []
 
-        return grid.marching_squares_grid_pixels_to_grid_arcsec(
-            grid_pixels=tangential_critical_curve_indices[0],
-            shape=lambda_tangential_2d.shape,
+        tangential_critical_curve = grid.geometry.grid_arcsec_from_grid_pixels_1d_for_marching_squares(
+            grid_pixels_1d=tangential_critical_curve_indices[0],
+            shape_2d=tangential_eigen_values.sub_shape_2d,
         )
+
+        return grids.IrregularGrid(grid=tangential_critical_curve)
 
     def radial_critical_curve_from_grid(self, grid):
 
-        lambda_radial_2d = self.radial_eigen_value_from_grid(
-            grid=grid, return_in_2d=True, return_binned=False
+        radial_eigen_values = self.radial_eigen_value_from_grid(grid=grid)
+
+        radial_critical_curve_indices = measure.find_contours(
+            radial_eigen_values.in_2d, 0
         )
 
-        radial_critical_curve_indices = measure.find_contours(lambda_radial_2d, 0)
-
-        if radial_critical_curve_indices == []:
+        if len(radial_critical_curve_indices) == 0:
             return []
 
-        return grid.marching_squares_grid_pixels_to_grid_arcsec(
-            grid_pixels=radial_critical_curve_indices[0], shape=lambda_radial_2d.shape
+        radial_critical_curve = grid.geometry.grid_arcsec_from_grid_pixels_1d_for_marching_squares(
+            grid_pixels_1d=radial_critical_curve_indices[0],
+            shape_2d=radial_eigen_values.sub_shape_2d,
         )
+
+        return grids.IrregularGrid(grid=radial_critical_curve)
 
     def tangential_caustic_from_grid(self, grid):
 
         tangential_critical_curve = self.tangential_critical_curve_from_grid(grid=grid)
 
-        if tangential_critical_curve == []:
+        if len(tangential_critical_curve) == 0:
             return []
 
-        deflections_1d = self.deflections_from_grid(
-            grid=tangential_critical_curve, return_in_2d=False, return_binned=False
-        )
+        deflections_1d = self.deflections_from_grid(grid=tangential_critical_curve)
 
         return tangential_critical_curve - deflections_1d
 
@@ -533,14 +452,14 @@ class AbstractPlaneLensing(AbstractPlaneCosmology):
 
         radial_critical_curve = self.radial_critical_curve_from_grid(grid=grid)
 
-        if radial_critical_curve == []:
+        if len(radial_critical_curve) == 0:
             return []
 
-        deflections_1d = self.deflections_from_grid(
-            grid=radial_critical_curve, return_in_2d=False, return_binned=False
+        deflections_critical_curve = self.deflections_from_grid(
+            grid=radial_critical_curve
         )
 
-        return radial_critical_curve - deflections_1d
+        return radial_critical_curve - deflections_critical_curve
 
     def critical_curves_from_grid(self, grid):
         return [
@@ -717,94 +636,82 @@ class AbstractPlaneData(AbstractPlaneLensing):
             redshift=redshift, galaxies=galaxies, cosmology=cosmology
         )
 
+    def blurred_profile_image_from_grid_and_psf(self, grid, psf, blurring_grid):
+
+        profile_image = self.profile_image_from_grid(grid=grid)
+
+        blurring_image = self.profile_image_from_grid(grid=blurring_grid)
+
+        return psf.convolved_array_from_array_2d_and_mask(
+            array_2d=profile_image.in_2d_binned + blurring_image.in_2d_binned,
+            mask=grid.mask,
+        )
+
+    def blurred_profile_images_of_galaxies_from_grid_and_psf(
+        self, grid, psf, blurring_grid
+    ):
+        return [
+            galaxy.blurred_profile_image_from_grid_and_psf(
+                grid=grid, psf=psf, blurring_grid=blurring_grid
+            )
+            for galaxy in self.galaxies
+        ]
+
     def blurred_profile_image_from_grid_and_convolver(
-        self, grid, convolver, preload_blurring_grid=None
+        self, grid, convolver, blurring_grid
     ):
 
-        if preload_blurring_grid is None:
-            preload_blurring_grid = grid.blurring_grid_from_psf_shape(
-                psf_shape=convolver.psf.shape
-            )
+        profile_image = self.profile_image_from_grid(grid=grid)
 
-        if convolver.blurring_mask is None:
-            blurring_mask = grid.mask.blurring_mask_from_psf_shape(
-                psf_shape=convolver.psf.shape
-            )
-            convolver = convolver.convolver_with_blurring_mask_added(
-                blurring_mask=blurring_mask
-            )
+        blurring_image = self.profile_image_from_grid(grid=blurring_grid)
 
-        image_array = self.profile_image_from_grid(
-            grid=grid, return_in_2d=False, return_binned=True
+        return convolver.convolved_image_from_image_and_blurring_image(
+            image=profile_image, blurring_image=blurring_image
         )
 
-        blurring_array = self.profile_image_from_grid(
-            grid=preload_blurring_grid, return_in_2d=False, return_binned=True
-        )
-
-        return convolver.convolve_image(
-            image_array=image_array, blurring_array=blurring_array
-        )
-
-    def blurred_profile_1d_images_of_galaxies_from_grid_and_convolver(
-        self, grid, convolver, preload_blurring_grid=None
+    def blurred_profile_images_of_galaxies_from_grid_and_convolver(
+        self, grid, convolver, blurring_grid
     ):
+        return [
+            galaxy.blurred_profile_image_from_grid_and_convolver(
+                grid=grid, convolver=convolver, blurring_grid=blurring_grid
+            )
+            for galaxy in self.galaxies
+        ]
 
-        if preload_blurring_grid is None:
-            preload_blurring_grid = grid.blurring_grid_from_psf_shape(
-                psf_shape=convolver.psf.shape
+    def profile_visibilities_from_grid_and_transformer(self, grid, transformer):
+
+        if self.galaxies:
+            profile_image = self.profile_image_from_grid(grid=grid)
+            return transformer.visibilities_from_image(image=profile_image)
+        else:
+            return vis.Visibilities.zeros(
+                shape_1d=(transformer.uv_wavelengths.shape[0],)
             )
 
-        if convolver.blurring_mask is None:
-            blurring_mask = grid.mask.blurring_mask_from_psf_shape(
-                psf_shape=convolver.psf.shape
+    def profile_visibilities_of_galaxies_from_grid_and_transformer(
+        self, grid, transformer
+    ):
+        return [
+            galaxy.profile_visibilities_from_grid_and_transformer(
+                grid=grid, transformer=transformer
             )
-            convolver = convolver.convolver_with_blurring_mask_added(
-                blurring_mask=blurring_mask
-            )
+            for galaxy in self.galaxies
+        ]
 
-        return list(
-            map(
-                lambda profile_image_1d, profile_blurring_image_1d: convolver.convolve_image(
-                    image_array=profile_image_1d,
-                    blurring_array=profile_blurring_image_1d,
-                ),
-                self.profile_images_of_galaxies_from_grid(
-                    grid=grid, return_in_2d=False, return_binned=True
-                ),
-                self.profile_images_of_galaxies_from_grid(
-                    grid=preload_blurring_grid, return_in_2d=False, return_binned=True
-                ),
-            )
-        )
-
-    def visibilities_from_grid_and_transformer(self, grid, transformer):
-
-        profile_image_plane_image_1d = self.profile_image_from_grid(
-            grid=grid, return_in_2d=False, return_binned=True
-        )
-
-        return transformer.visibilities_from_image_1d(
-            image_1d=profile_image_plane_image_1d
-        )
-
-    def pixelization_grid_from_grid(self, grid):
+    def sparse_image_plane_grid_from_grid(self, grid):
 
         if not self.has_pixelization:
             return None
 
-        binned_hyper_galaxy_image_1d = (
-            self.binned_hyper_galaxy_image_1d_of_galaxy_with_pixelization
+        hyper_galaxy_image = self.hyper_galaxy_image_of_galaxy_with_pixelization
+
+        return self.pixelization.sparse_grid_from_grid(
+            grid=grid, hyper_image=hyper_galaxy_image
         )
 
-        return self.pixelization.pixelization_grid_from_grid(
-            grid=grid,
-            cluster_grid=grid.binned,
-            hyper_image=binned_hyper_galaxy_image_1d,
-        )
-
-    def mapper_from_grid_and_pixelization_grid(
-        self, grid, pixelization_grid, inversion_uses_border=False
+    def mapper_from_grid_and_sparse_grid(
+        self, grid, sparse_grid, inversion_uses_border=False
     ):
 
         galaxies_with_pixelization = list(
@@ -817,11 +724,11 @@ class AbstractPlaneData(AbstractPlaneLensing):
 
             pixelization = galaxies_with_pixelization[0].pixelization
 
-            return pixelization.mapper_from_grid_and_pixelization_grid(
+            return pixelization.mapper_from_grid_and_sparse_grid(
                 grid=grid,
-                pixelization_grid=pixelization_grid,
+                sparse_grid=sparse_grid,
                 inversion_uses_border=inversion_uses_border,
-                hyper_image=galaxies_with_pixelization[0].hyper_galaxy_image_1d,
+                hyper_image=galaxies_with_pixelization[0].hyper_galaxy_image,
             )
 
         elif len(galaxies_with_pixelization) > 1:
@@ -832,70 +739,65 @@ class AbstractPlaneData(AbstractPlaneLensing):
     def plane_image_from_grid(self, grid):
         return lens_util.plane_image_of_galaxies_from_grid(
             shape=grid.mask.shape,
-            grid=grid.unlensed_unsubbed_1d,
+            grid=grid.geometry.unmasked_grid,
             galaxies=self.galaxies,
         )
 
-    def hyper_noise_map_1d_from_noise_map_1d(self, noise_map_1d):
-        hyper_noise_maps_1d = self.hyper_noise_maps_1d_of_galaxies_from_noise_map_1d(
-            noise_map_1d=noise_map_1d
+    def hyper_noise_map_from_noise_map(self, noise_map):
+        hyper_noise_maps = self.hyper_noise_maps_of_galaxies_from_noise_map(
+            noise_map=noise_map
         )
-        hyper_noise_maps_1d = [
-            hyper_noise_map
-            for hyper_noise_map in hyper_noise_maps_1d
-            if hyper_noise_map is not None
-        ]
-        return sum(hyper_noise_maps_1d)
+        return sum(hyper_noise_maps)
 
-    def hyper_noise_maps_1d_of_galaxies_from_noise_map_1d(self, noise_map_1d):
+    def hyper_noise_maps_of_galaxies_from_noise_map(self, noise_map):
         """For a contribution map and noise-map, use the model hyper_galaxy galaxies to compute a hyper noise-map.
 
         Parameters
         -----------
-        noise_map_1d : ccd.NoiseMap or ndarray
+        noise_map : imaging.NoiseMap or ndarray
             An array describing the RMS standard deviation error in each pixel, preferably in units of electrons per
             second.
         """
-        hyper_noise_maps_1d = []
+        hyper_noise_maps = []
 
         for galaxy in self.galaxies:
             if galaxy.hyper_galaxy is not None:
 
                 hyper_noise_map_1d = galaxy.hyper_galaxy.hyper_noise_map_from_hyper_images_and_noise_map(
-                    noise_map=noise_map_1d,
-                    hyper_model_image=galaxy.hyper_model_image_1d,
-                    hyper_galaxy_image=galaxy.hyper_galaxy_image_1d,
+                    noise_map=noise_map,
+                    hyper_model_image=galaxy.hyper_model_image,
+                    hyper_galaxy_image=galaxy.hyper_galaxy_image,
                 )
 
-                hyper_noise_maps_1d.append(hyper_noise_map_1d)
+                hyper_noise_maps.append(hyper_noise_map_1d)
 
             else:
 
-                hyper_noise_maps_1d.append(None)
+                hyper_noise_maps.append(arrays.MaskedArray.zeros(mask=noise_map.mask))
 
-        return hyper_noise_maps_1d
+        return hyper_noise_maps
 
     @property
-    def contribution_maps_1d_of_galaxies(self):
+    def contribution_maps_of_galaxies(self):
 
-        contribution_maps_1d = []
+        contribution_maps = []
 
         for galaxy in self.galaxies:
 
             if galaxy.hyper_galaxy is not None:
 
                 contribution_map = galaxy.hyper_galaxy.contribution_map_from_hyper_images(
-                    hyper_model_image=galaxy.hyper_model_image_1d,
-                    hyper_galaxy_image=galaxy.hyper_galaxy_image_1d,
+                    hyper_model_image=galaxy.hyper_model_image,
+                    hyper_galaxy_image=galaxy.hyper_galaxy_image,
                 )
 
-                contribution_maps_1d.append(contribution_map)
+                contribution_maps.append(contribution_map)
 
             else:
 
-                contribution_maps_1d.append(None)
+                contribution_maps.append(None)
 
-        return contribution_maps_1d
+        return contribution_maps
 
     @property
     def yticks(self):
@@ -1024,9 +926,15 @@ class PlanePositions(object):
         )
 
 
-class PlaneImage(scaled_array.ScaledRectangularPixelArray):
-    def __init__(self, array, pixel_scales, grid, origin=(0.0, 0.0)):
+class PlaneImage(object):
+    def __init__(self, array, grid):
+        self.array = array
         self.grid = grid
-        super(PlaneImage, self).__init__(
-            array=array, pixel_scales=pixel_scales, origin=origin
-        )
+
+    @property
+    def xticks(self):
+        return self.array.mask.geometry.xticks
+
+    @property
+    def yticks(self):
+        return self.array.mask.geometry.yticks

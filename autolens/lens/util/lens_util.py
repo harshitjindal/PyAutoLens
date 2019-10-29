@@ -1,6 +1,5 @@
+import autoarray as aa
 from autolens import exc
-from autolens.array.util import grid_util
-from autolens.array.mapping_util import array_mapping_util
 from autolens.lens import plane as pl
 
 import numpy as np
@@ -19,31 +18,13 @@ def plane_image_of_galaxies_from_grid(shape, grid, galaxies, buffer=1.0e-2):
     )
     origin = ((y_max + y_min) / 2.0, (x_max + x_min) / 2.0)
 
-    uniform_grid = grid_util.grid_1d_from_mask_pixel_scales_sub_grid_size_and_origin(
-        mask=np.full(shape=shape, fill_value=False),
-        pixel_scales=pixel_scales,
-        sub_grid_size=1,
-        origin=origin,
+    uniform_grid = aa.grid.uniform(
+        shape_2d=shape, pixel_scales=pixel_scales, sub_size=1, origin=origin
     )
 
-    image_1d = sum(
-        map(
-            lambda g: g.profile_image_from_grid(
-                grid=uniform_grid, return_in_2d=False, return_binned=False
-            ),
-            galaxies,
-        )
-    )
+    image = sum(map(lambda g: g.profile_image_from_grid(grid=uniform_grid), galaxies))
 
-    image_2d = array_mapping_util.sub_array_2d_from_sub_array_1d_mask_and_sub_grid_size(
-        sub_array_1d=image_1d,
-        mask=np.full(fill_value=False, shape=shape),
-        sub_grid_size=1,
-    )
-
-    return pl.PlaneImage(
-        array=image_2d, pixel_scales=pixel_scales, grid=grid, origin=origin
-    )
+    return pl.PlaneImage(array=image, grid=grid)
 
 
 def ordered_plane_redshifts_from_galaxies(galaxies):
