@@ -2,6 +2,7 @@ from astropy import cosmology as cosmo
 
 import autofit as af
 import autoarray as aa
+from autolens.lens.ray_tracing import GalaxyTracer
 from autolens.pipeline.phase import abstract
 from autolens.pipeline.phase import extensions
 from autolens.pipeline.phase.data.result import Result
@@ -25,19 +26,18 @@ def isinstance_or_prior(obj, cls):
 
 
 class PhaseData(abstract.AbstractPhase):
-    galaxies = af.PhaseProperty("galaxies")
+    tracer = af.PhaseProperty("tracer")
 
     Result = Result
 
     def __init__(
-        self,
-        phase_name,
-        phase_tag,
-        phase_folders=tuple(),
-        galaxies=None,
-        optimizer_class=af.MultiNest,
-        cosmology=cosmo.Planck15,
-        auto_link_priors=False,
+            self,
+            phase_name,
+            phase_tag,
+            phase_folders=tuple(),
+            galaxies=None,
+            optimizer_class=af.MultiNest,
+            cosmology=cosmo.Planck15,
     ):
         """
 
@@ -50,17 +50,35 @@ class PhaseData(abstract.AbstractPhase):
             The class of a non_linear optimizer
         """
 
-        super(PhaseData, self).__init__(
+        super().__init__(
             phase_name=phase_name,
             phase_tag=phase_tag,
             phase_folders=phase_folders,
             optimizer_class=optimizer_class,
-            auto_link_priors=auto_link_priors,
         )
-        self.galaxies = galaxies or []
-        self.cosmology = cosmology
+        self.tracer = af.PriorModel(
+            GalaxyTracer,
+            galaxies=galaxies,
+            cosmology=cosmology
+        )
 
         self.is_hyper_phase = False
+
+    @property
+    def galaxies(self):
+        return self.tracer.galaxies
+
+    @galaxies.setter
+    def galaxies(self, galaxies):
+        self.tracer.galaxies = galaxies
+
+    @property
+    def cosmology(self):
+        return self.tracer.cosmology
+
+    @cosmology.setter
+    def cosmology(self, cosmology):
+        self.tracer.cosmology = cosmology
 
     def run(self, data, results=None, mask=None, positions=None):
         """

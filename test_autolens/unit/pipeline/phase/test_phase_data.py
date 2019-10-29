@@ -716,14 +716,19 @@ class TestResult(object):
             optimizer_class=mock_pipeline.MockNLO,
             mask_function=mask_function_7x7,
             galaxies=[
-                al.Galaxy(redshift=0.5, light=al.lp.EllipticalSersic(intensity=1.0))
+                al.Galaxy(
+                    redshift=0.5,
+                    light=al.lp.EllipticalSersic(
+                        intensity=1.0
+                    )
+                )
             ],
             phase_name="test_phase_2",
         )
 
         result = phase_imaging_7x7.run(data=imaging_7x7)
 
-        assert result.positions == None
+        assert result.positions is None
 
         phase_imaging_7x7 = al.PhaseImaging(
             optimizer_class=mock_pipeline.MockNLO,

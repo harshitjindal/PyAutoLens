@@ -36,7 +36,6 @@ class PhaseImaging(data.PhaseData):
         pixel_scale_interpolation_grid=None,
         inversion_uses_border=True,
         inversion_pixel_limit=None,
-        auto_link_priors=False,
     ):
 
         """
@@ -69,7 +68,6 @@ class PhaseImaging(data.PhaseData):
             galaxies=galaxies,
             optimizer_class=optimizer_class,
             cosmology=cosmology,
-            auto_link_priors=auto_link_priors,
         )
 
         self.hyper_image_sky = hyper_image_sky
@@ -145,7 +143,6 @@ class PhaseImaging(data.PhaseData):
 
         analysis = self.Analysis(
             masked_imaging=masked_imaging,
-            cosmology=self.cosmology,
             image_path=self.optimizer.paths.image_path,
             results=results,
         )
