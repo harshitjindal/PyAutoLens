@@ -4,6 +4,7 @@ from skimage import measure
 
 from autoarray.structures import grids
 from autoarray.operators.inversion import inversions as inv
+from autoastro.hyper.hyper_data import HyperBackgroundNoise, HyperImageSky
 from autoastro.util import cosmology_util
 from autoastro.galaxy import galaxy as g
 from autolens.lens import plane as pl
@@ -980,8 +981,13 @@ class GalaxyTracer(Tracer):
     def __init__(
             self,
             galaxies,
-            cosmology
+            cosmology,
+            hyper_background_noise: HyperBackgroundNoise = None,
+            hyper_image_sky: HyperImageSky = None
     ):
+        self.hyper_background_noise = hyper_background_noise
+        self.hyper_image_sky = hyper_image_sky
+
         plane_redshifts = lens_util.ordered_plane_redshifts_from_galaxies(
             galaxies=galaxies
         )

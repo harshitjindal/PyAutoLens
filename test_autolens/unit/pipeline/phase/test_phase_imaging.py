@@ -322,10 +322,10 @@ class TestPhase(object):
         assert mask.sub_size == 4
 
         masked_imaging = al.masked.imaging(imaging=imaging_7x7, mask=mask)
-        tracer = analysis.tracer_for_instance(instance=instance)
+
         fit = ImagingFit(
             masked_imaging=masked_imaging,
-            tracer=tracer,
+            tracer=instance,
             hyper_image_sky=hyper_image_sky,
             hyper_background_noise=hyper_background_noise,
         )

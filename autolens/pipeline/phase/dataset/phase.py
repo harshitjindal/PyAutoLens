@@ -1,7 +1,7 @@
 from astropy import cosmology as cosmo
 
-import autofit as af
 import autoarray as aa
+import autofit as af
 from autolens.lens.ray_tracing import GalaxyTracer
 from autolens.pipeline.phase import abstract
 from autolens.pipeline.phase import extensions
@@ -39,6 +39,7 @@ class PhaseDataset(abstract.AbstractPhase):
             galaxies=None,
             optimizer_class=af.MultiNest,
             cosmology=cosmo.Planck15,
+            hyper_background_noise=None
     ):
         """
 
@@ -65,7 +66,7 @@ class PhaseDataset(abstract.AbstractPhase):
             model=tracer
         )
 
-        self.is_hyper_phase = False
+        self.hyper_background_noise = hyper_background_noise
 
     @property
     def tracer(self):
@@ -82,6 +83,14 @@ class PhaseDataset(abstract.AbstractPhase):
     @galaxies.setter
     def galaxies(self, galaxies):
         self.tracer.galaxies = galaxies
+
+    @property
+    def hyper_background_noise(self):
+        return self.tracer.hyper_background_noise
+
+    @hyper_background_noise.setter
+    def hyper_background_noise(self, hyper_background_noise):
+        self.tracer.hyper_background_noise = hyper_background_noise
 
     @property
     def cosmology(self):

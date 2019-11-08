@@ -12,30 +12,27 @@ from autolens.pipeline.phase.interferometer.result import Result
 
 
 class PhaseInterferometer(dataset.PhaseDataset):
-    galaxies = af.PhaseProperty("galaxies")
-    hyper_background_noise = af.PhaseProperty("hyper_background_noise")
-
     Analysis = Analysis
     Result = Result
 
     def __init__(
-        self,
-        phase_name,
-        real_space_shape_2d,
-        real_space_pixel_scales,
-        phase_folders=tuple(),
-        galaxies=None,
-        hyper_background_noise=None,
-        optimizer_class=af.MultiNest,
-        cosmology=cosmo.Planck15,
-        sub_size=2,
-        primary_beam_shape_2d=None,
-        positions_threshold=None,
-        mask_function=None,
-        inner_mask_radii=None,
-        pixel_scale_interpolation_grid=None,
-        inversion_uses_border=True,
-        inversion_pixel_limit=None,
+            self,
+            phase_name,
+            real_space_shape_2d,
+            real_space_pixel_scales,
+            phase_folders=tuple(),
+            galaxies=None,
+            hyper_background_noise=None,
+            optimizer_class=af.MultiNest,
+            cosmology=cosmo.Planck15,
+            sub_size=2,
+            primary_beam_shape_2d=None,
+            positions_threshold=None,
+            mask_function=None,
+            inner_mask_radii=None,
+            pixel_scale_interpolation_grid=None,
+            inversion_uses_border=True,
+            inversion_pixel_limit=None,
     ):
 
         """
@@ -71,11 +68,8 @@ class PhaseInterferometer(dataset.PhaseDataset):
             galaxies=galaxies,
             optimizer_class=optimizer_class,
             cosmology=cosmology,
+            hyper_background_noise=hyper_background_noise
         )
-
-        self.hyper_background_noise = hyper_background_noise
-
-        self.is_hyper_phase = False
 
         self.meta_interferometer_fit = MetaInterferometerFit(
             variable=self.variable,
@@ -180,11 +174,11 @@ class PhaseInterferometer(dataset.PhaseDataset):
             phase_info.close()
 
     def extend_with_multiple_hyper_phases(
-        self,
-        hyper_galaxy=False,
-        inversion=False,
-        include_background_sky=False,
-        include_background_noise=False,
+            self,
+            hyper_galaxy=False,
+            inversion=False,
+            include_background_sky=False,
+            include_background_noise=False,
     ):
         hyper_phase_classes = []
 

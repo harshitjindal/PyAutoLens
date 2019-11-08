@@ -10,9 +10,6 @@ from autolens.pipeline.phase.imaging.result import Result
 
 
 class PhaseImaging(dataset.PhaseDataset):
-    hyper_image_sky = af.PhaseProperty("hyper_image_sky")
-    hyper_background_noise = af.PhaseProperty("hyper_background_noise")
-
     Analysis = Analysis
     Result = Result
 
@@ -67,10 +64,10 @@ class PhaseImaging(dataset.PhaseDataset):
             galaxies=galaxies,
             optimizer_class=optimizer_class,
             cosmology=cosmology,
+            hyper_background_noise=hyper_background_noise
         )
 
         self.hyper_image_sky = hyper_image_sky
-        self.hyper_background_noise = hyper_background_noise
 
         self.is_hyper_phase = False
 
@@ -87,6 +84,14 @@ class PhaseImaging(dataset.PhaseDataset):
             inversion_uses_border=inversion_uses_border,
             inversion_pixel_limit=inversion_pixel_limit,
         )
+
+    @property
+    def hyper_image_sky(self):
+        return self.tracer.hyper_image_sky
+
+    @hyper_image_sky.setter
+    def hyper_image_sky(self, hyper_image_sky):
+        self.tracer.hyper_image_sky = hyper_image_sky
 
     # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def modify_image(self, image, results):

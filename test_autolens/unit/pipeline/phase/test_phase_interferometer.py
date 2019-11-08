@@ -181,7 +181,7 @@ class TestPhase(object):
         )
 
         analysis = phase_interferometer_7.make_analysis(dataset=interferometer_7)
-        instance = phase_interferometer_7.variable.instance_from_unit_vector([])
+        instance = phase_interferometer_7.variable.instance_from_prior_medians()
         fit_figure_of_merit = analysis.fit(instance=instance)
 
         mask = phase_interferometer_7.meta_interferometer_fit.setup_phase_mask(
@@ -217,7 +217,7 @@ class TestPhase(object):
         )
 
         analysis = phase_interferometer_7.make_analysis(dataset=interferometer_7)
-        instance = phase_interferometer_7.variable.instance_from_unit_vector([])
+        instance = phase_interferometer_7.variable.instance_from_prior_medians()
         fit_figure_of_merit = analysis.fit(instance=instance)
 
         mask = phase_interferometer_7.meta_interferometer_fit.setup_phase_mask(
