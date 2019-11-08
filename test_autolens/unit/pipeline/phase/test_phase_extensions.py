@@ -401,7 +401,8 @@ class TestHyperGalaxyPhase(object):
         hyper_background_noise = al.hyper_data.HyperBackgroundNoise(noise_scale=1.0)
 
         lens_galaxy = al.galaxy(
-            redshift=0.5, light=al.lp.EllipticalSersic(intensity=0.1)
+            redshift=0.5,
+            light=al.lp.EllipticalSersic(intensity=0.1)
         )
 
         phase_imaging_7x7 = al.PhaseImaging(
@@ -410,12 +411,11 @@ class TestHyperGalaxyPhase(object):
             hyper_image_sky=hyper_image_sky,
             hyper_background_noise=hyper_background_noise,
             sub_size=2,
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             phase_name="test_phase",
         )
 
-        analysis = phase_imaging_7x7.make_analysis(dataset=imaging_7x7)
-        instance = phase_imaging_7x7.variable.instance_from_unit_vector([])
+        instance = phase_imaging_7x7.variable.instance_from_prior_medians()
 
         mask = phase_imaging_7x7.meta_imaging_fit.setup_phase_mask(
             shape_2d=imaging_7x7.shape_2d,
@@ -425,7 +425,7 @@ class TestHyperGalaxyPhase(object):
         assert mask.sub_size == 2
 
         masked_imaging = al.masked.imaging(imaging=imaging_7x7, mask=mask)
-        tracer = analysis.tracer_for_instance(instance=instance)
+        tracer = instance
         fit = ImagingFit(
             masked_imaging=masked_imaging,
             tracer=tracer,
@@ -437,7 +437,7 @@ class TestHyperGalaxyPhase(object):
             hyper_galaxy=True
         )
 
-        instance = phase_imaging_7x7_hyper.variable.instance_from_unit_vector([])
+        instance = phase_imaging_7x7_hyper.variable.instance_from_prior_medians()
 
         instance.hyper_galaxy = al.HyperGalaxy(noise_factor=0.0)
 
