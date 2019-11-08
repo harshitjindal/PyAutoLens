@@ -239,7 +239,6 @@ class TestImagePassing(object):
         results_collection.add("phase", result)
         analysis = al.PhaseImaging.Analysis(
             masked_imaging=masked_imaging_7x7,
-            cosmology=None,
             results=results_collection,
             image_path="",
         )
@@ -270,7 +269,6 @@ class TestImagePassing(object):
         results_collection.add("phase", result)
         analysis = al.PhaseImaging.Analysis(
             masked_imaging=masked_imaging_7x7,
-            cosmology=cosmo.Planck15,
             results=results_collection,
             image_path="",
         )

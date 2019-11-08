@@ -175,7 +175,7 @@ class TestPhase(object):
             real_space_shape_2d=(7, 7),
             real_space_pixel_scales=(0.1, 0.1),
             galaxies=[lens_galaxy],
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             sub_size=2,
             phase_name="test_phase",
         )
@@ -211,7 +211,7 @@ class TestPhase(object):
             real_space_pixel_scales=(0.1, 0.1),
             galaxies=[lens_galaxy],
             hyper_background_noise=hyper_background_noise,
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             sub_size=4,
             phase_name="test_phase",
         )

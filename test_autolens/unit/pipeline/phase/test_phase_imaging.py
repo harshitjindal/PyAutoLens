@@ -269,7 +269,7 @@ class TestPhase(object):
         phase_imaging_7x7 = al.PhaseImaging(
             mask_function=mask_function_7x7,
             galaxies=[lens_galaxy],
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             sub_size=2,
             phase_name="test_phase",
         )
@@ -305,7 +305,7 @@ class TestPhase(object):
             galaxies=[lens_galaxy],
             hyper_image_sky=hyper_image_sky,
             hyper_background_noise=hyper_background_noise,
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             sub_size=4,
             phase_name="test_phase",
         )
