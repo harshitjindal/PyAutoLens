@@ -1,12 +1,13 @@
 import numpy as np
 from astropy import cosmology as cosmo
+from astropy.cosmology.core import Cosmology
 from skimage import measure
 
-from autoarray.structures import grids
 from autoarray.operators.inversion import inversions as inv
+from autoarray.structures import grids
+from autoastro.galaxy import galaxy as g, Galaxy
 from autoastro.hyper.hyper_data import HyperBackgroundNoise, HyperImageSky
 from autoastro.util import cosmology_util
-from autoastro.galaxy import galaxy as g
 from autolens.lens import plane as pl
 from autolens.util import lens_util
 
@@ -792,13 +793,13 @@ class AbstractTracerData(AbstractTracerLensing):
         )
 
     def inversion_intererometer_from_grid_and_data(
-        self,
-        grid,
-        visibilities,
-        noise_map,
-        transformer,
-        inversion_uses_border=False,
-        preload_sparse_grids_of_planes=None,
+            self,
+            grid,
+            visibilities,
+            noise_map,
+            transformer,
+            inversion_uses_border=False,
+            preload_sparse_grids_of_planes=None,
     ):
 
         mappers_of_planes = self.mappers_of_planes_from_grid(
@@ -980,8 +981,8 @@ class Tracer(AbstractTracerData):
 class GalaxyTracer(Tracer):
     def __init__(
             self,
-            galaxies,
-            cosmology = None,
+            galaxies: [Galaxy],
+            cosmology: Cosmology = None,
             hyper_background_noise: HyperBackgroundNoise = None,
             hyper_image_sky: HyperImageSky = None
     ):

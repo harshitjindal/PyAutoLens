@@ -34,4 +34,7 @@ class Result(af.Result):
         """
         Tuples associating the names of galaxies with instances from the best fit
         """
-        return self.constant.path_instance_tuples_for_class(cls=g.Galaxy)
+        return af.path_instances_of_class(
+            self.previous_variable,
+            cls=g.Galaxy
+        )

@@ -1,9 +1,9 @@
-import autolens as al
 import numpy as np
 import pytest
 from astropy import cosmology as cosmo
 
 import autofit as af
+import autolens as al
 from autolens.fit.fit import ImagingFit
 from autolens.lens.ray_tracing import GalaxyTracer
 from test_autolens.mock import mock_pipeline
@@ -37,13 +37,28 @@ def make_instance(all_galaxies):
 
 
 @pytest.fixture(name="result")
-def make_result(masked_imaging_7x7, all_galaxies):
+def make_result(
+        masked_imaging_7x7,
+        lens_galaxy,
+        source_galaxy,
+        all_galaxies
+):
+    tracer_model = af.PriorModel(
+        GalaxyTracer,
+        galaxies=dict(
+            lens=lens_galaxy,
+            source=source_galaxy
+        )
+    )
+    tracer_model.lens = lens_galaxy
+    tracer_model.source = source_galaxy
     return al.PhaseImaging.Result(
         constant=GalaxyTracer(
-            all_galaxies
+            all_galaxies,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0)
         ),
         figure_of_merit=1.0,
-        previous_variable=af.ModelMapper(),
+        previous_variable=tracer_model,
         gaussian_tuples=None,
         analysis=al.PhaseImaging.Analysis(
             masked_imaging=masked_imaging_7x7, image_path=""
@@ -74,7 +89,7 @@ class MockAnalysis(object):
 # noinspection PyAbstractClass
 class MockOptimizer(af.NonLinearOptimizer):
     def __init__(
-        self, phase_name="mock_optimizer", phase_tag="tag", phase_folders=tuple()
+            self, phase_name="mock_optimizer", phase_tag="tag", phase_folders=tuple()
     ):
         super().__init__(
             paths=af.Paths(
@@ -188,16 +203,15 @@ class TestImagePassing(object):
         assert isinstance(image_dict[("galaxies", "lens")], np.ndarray)
         assert isinstance(image_dict[("galaxies", "source")], np.ndarray)
 
-        result.constant.galaxies.lens = al.galaxy(redshift=0.5)
+        result.constant.galaxies[1] = al.galaxy(redshift=0.5)
 
         image_dict = result.image_galaxy_dict
-        assert (image_dict[("galaxies", "lens")].in_2d == np.zeros((7, 7))).all()
+
         assert isinstance(image_dict[("galaxies", "source")], np.ndarray)
 
     def test__results_are_passed_to_new_analysis__sets_up_hyper_images(
-        self, mask_function_7x7, results_collection_7x7, imaging_7x7
+            self, mask_function_7x7, results_collection_7x7, imaging_7x7
     ):
-
         mask = mask_function_7x7(
             shape_2d=imaging_7x7.shape_2d, pixel_scales=imaging_7x7.pixel_scales
         )
@@ -223,18 +237,18 @@ class TestImagePassing(object):
         )
 
         assert (
-            analysis.hyper_galaxy_image_path_dict[("g0",)].in_1d
-            == np.array([2.0, 2.0, 2.0, 0.02, 2.0, 2.0, 2.0, 2.0, 2.0])
+                analysis.hyper_galaxy_image_path_dict[("g0",)].in_1d
+                == np.array([2.0, 2.0, 2.0, 0.02, 2.0, 2.0, 2.0, 2.0, 2.0])
         ).all()
 
         assert (
-            analysis.hyper_galaxy_image_path_dict[("g1",)].in_1d
-            == np.array([2.0, 2.0, 2.0, 2.0, 2.0, 0.02, 2.0, 2.0, 2.0])
+                analysis.hyper_galaxy_image_path_dict[("g1",)].in_1d
+                == np.array([2.0, 2.0, 2.0, 2.0, 2.0, 0.02, 2.0, 2.0, 2.0])
         ).all()
 
         assert (
-            analysis.hyper_model_image.in_1d
-            == np.array([4.0, 4.0, 4.0, 2.02, 4.0, 2.02, 4.0, 4.0, 4.0])
+                analysis.hyper_model_image.in_1d
+                == np.array([4.0, 4.0, 4.0, 2.02, 4.0, 2.02, 4.0, 4.0, 4.0])
         ).all()
 
     def test__associate_images_(self, instance, result, masked_imaging_7x7):
@@ -395,9 +409,8 @@ class TestHyperAPI(object):
 
 class TestHyperGalaxyPhase(object):
     def test__likelihood_function_is_same_as_normal_phase_likelihood_function(
-        self, imaging_7x7, mask_function_7x7
+            self, imaging_7x7, mask_function_7x7
     ):
-
         hyper_image_sky = al.hyper_data.HyperImageSky(sky_scale=1.0)
         hyper_background_noise = al.hyper_data.HyperBackgroundNoise(noise_scale=1.0)
 
