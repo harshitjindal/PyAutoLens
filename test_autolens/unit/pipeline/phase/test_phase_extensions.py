@@ -36,6 +36,14 @@ def make_instance(all_galaxies):
     return instance
 
 
+@pytest.fixture(name="tracer")
+def make_tracer(all_galaxies):
+    instance = GalaxyTracer(
+        galaxies=all_galaxies
+    )
+    return instance
+
+
 @pytest.fixture(name="result")
 def make_result(
         masked_imaging_7x7,
@@ -281,7 +289,7 @@ class TestImagePassing(object):
             hyper_model_image.in_2d, 1.0e-4
         )
 
-    def test__fit_uses_hyper_fit_correctly(self, instance, result, masked_imaging_7x7):
+    def test__fit_uses_hyper_fit_correctly(self, tracer, result, masked_imaging_7x7):
         results_collection = af.ResultsCollection()
         results_collection.add("phase", result)
         analysis = al.PhaseImaging.Analysis(
@@ -296,7 +304,7 @@ class TestImagePassing(object):
 
         instance.galaxies.lens.hyper_galaxy = hyper_galaxy
 
-        fit_figure_of_merit = analysis.fit(instance=instance)
+        fit_figure_of_merit = analysis.fit(instance=tracer)
 
         lens_hyper_image = result.image_galaxy_dict[("galaxies", "lens")]
         source_hyper_image = result.image_galaxy_dict[("galaxies", "source")]
@@ -305,14 +313,14 @@ class TestImagePassing(object):
 
         g0 = al.galaxy(
             redshift=0.5,
-            light_profile=instance.galaxies.lens.light,
-            mass_profile=instance.galaxies.lens.mass,
+            light_profile=tracer.galaxies.lens.light,
+            mass_profile=tracer.galaxies.lens.mass,
             hyper_galaxy=hyper_galaxy,
             hyper_model_image=hyper_model_image,
             hyper_galaxy_image=lens_hyper_image,
             hyper_minimum_value=0.0,
         )
-        g1 = al.galaxy(redshift=1.0, light_profile=instance.galaxies.source.light)
+        g1 = al.galaxy(redshift=1.0, light_profile=tracer.galaxies.source.light)
 
         tracer = al.tracer.from_galaxies(galaxies=[g0, g1])
 
