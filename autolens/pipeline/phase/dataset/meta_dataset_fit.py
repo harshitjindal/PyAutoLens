@@ -76,7 +76,7 @@ class MetaDatasetFit:
 
     @property
     def pixelization(self):
-        for galaxy in self.variable.galaxies:
+        for galaxy in self.variable.tracer.galaxies:
             if galaxy.pixelization is not None:
                 if isinstance(galaxy.pixelization, af.PriorModel):
                     return galaxy.pixelization.cls
@@ -85,8 +85,8 @@ class MetaDatasetFit:
 
     @property
     def uses_cluster_inversion(self):
-        if self.variable.galaxies:
-            for galaxy in self.variable.galaxies:
+        if self.variable.tracer.galaxies:
+            for galaxy in self.variable.tracer.galaxies:
                 if isinstance_or_prior(galaxy.pixelization, pix.VoronoiBrightnessImage):
                     return True
         return False

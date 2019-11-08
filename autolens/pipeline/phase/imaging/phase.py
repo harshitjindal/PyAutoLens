@@ -10,7 +10,6 @@ from autolens.pipeline.phase.imaging.result import Result
 
 
 class PhaseImaging(dataset.PhaseDataset):
-    galaxies = af.PhaseProperty("galaxies")
     hyper_image_sky = af.PhaseProperty("hyper_image_sky")
     hyper_background_noise = af.PhaseProperty("hyper_background_noise")
 

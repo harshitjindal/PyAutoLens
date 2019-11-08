@@ -58,7 +58,7 @@ class PhaseDataset(abstract.AbstractPhase):
         )
         self.tracer = af.PriorModel(
             GalaxyTracer,
-            galaxies=galaxies,
+            galaxies=galaxies or [],
             cosmology=cosmology
         )
 

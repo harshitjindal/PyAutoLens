@@ -14,6 +14,11 @@ def make_general_config():
     af.conf.instance.general = af.conf.NamedConfig(general_config_path + "general.ini")
 
 
+@pytest.fixture(name="variable")
+def make_variable():
+    return af.CollectionPriorModel()
+
+
 class PlotPatch(object):
     def __init__(self):
         self.paths = []
