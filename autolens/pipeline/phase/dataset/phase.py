@@ -26,8 +26,6 @@ def isinstance_or_prior(obj, cls):
 
 
 class PhaseDataset(abstract.AbstractPhase):
-    tracer = af.PhaseProperty("tracer")
-
     Result = Result
 
     def __init__(
@@ -50,19 +48,29 @@ class PhaseDataset(abstract.AbstractPhase):
             The class of a non_linear optimizer
         """
 
-        super().__init__(
-            phase_name=phase_name,
-            phase_tag=phase_tag,
-            phase_folders=phase_folders,
-            optimizer_class=optimizer_class,
-        )
-        self.tracer = af.PriorModel(
+        tracer = af.PriorModel(
             GalaxyTracer,
             galaxies=galaxies or [],
             cosmology=cosmology
         )
 
+        super().__init__(
+            phase_name=phase_name,
+            phase_tag=phase_tag,
+            phase_folders=phase_folders,
+            optimizer_class=optimizer_class,
+            model=tracer
+        )
+
         self.is_hyper_phase = False
+
+    @property
+    def tracer(self):
+        return self.variable
+
+    @tracer.setter
+    def tracer(self, tracer):
+        self.variable = tracer
 
     @property
     def galaxies(self):

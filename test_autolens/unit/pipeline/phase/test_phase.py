@@ -124,19 +124,20 @@ class TestPhase(object):
                     redshift=al.Redshift,
                 ),
                 lens1=al.GalaxyModel(
-                    sis=al.mp.SphericalIsothermal, redshift=al.Redshift
+                    sis=al.mp.SphericalIsothermal,
+                    redshift=al.Redshift
                 ),
             ),
             optimizer_class=af.MultiNest,
             phase_name="test_phase",
         )
 
-        for item in phase_dataset_7x7.variable.path_priors_tuples:
-            print(item)
+        lens_galaxy = phase_dataset_7x7.variable.galaxies[0]
+        lens1_galaxy = phase_dataset_7x7.variable.galaxies[1]
 
-        sersic = phase_dataset_7x7.variable.galaxies[0].sersic
-        sis = phase_dataset_7x7.variable.galaxies[0].sis
-        lens_1_sis = phase_dataset_7x7.variable.galaxies[1].sis
+        sersic = lens_galaxy.sersic
+        sis = lens_galaxy.sis
+        lens_1_sis = lens1_galaxy.sis
 
         arguments = {
             sersic.centre[0]: 0.2,
@@ -149,11 +150,11 @@ class TestPhase(object):
             sis.centre[0]: 0.1,
             sis.centre[1]: 0.2,
             sis.einstein_radius.priors[0]: 0.3,
-            phase_dataset_7x7.variable.galaxies[0].redshift.priors[0]: 0.4,
+            lens_galaxy.redshift.priors[0]: 0.4,
             lens_1_sis.centre[0]: 0.6,
             lens_1_sis.centre[1]: 0.5,
             lens_1_sis.einstein_radius.priors[0]: 0.7,
-            phase_dataset_7x7.variable.galaxies[1].redshift.priors[0]: 0.8,
+            lens1_galaxy.redshift.priors[0]: 0.8,
         }
 
         instance = phase_dataset_7x7.variable.instance_for_arguments(
