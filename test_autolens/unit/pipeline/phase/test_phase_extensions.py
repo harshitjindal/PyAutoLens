@@ -43,7 +43,7 @@ def make_result(masked_imaging_7x7, instance):
         previous_variable=af.ModelMapper(),
         gaussian_tuples=None,
         analysis=al.PhaseImaging.Analysis(
-            masked_imaging=masked_imaging_7x7, cosmology=cosmo.Planck15, image_path=""
+            masked_imaging=masked_imaging_7x7, image_path=""
         ),
         optimizer=None,
     )

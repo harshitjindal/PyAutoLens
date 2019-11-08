@@ -8,10 +8,13 @@ from autolens.pipeline.phase import extensions
 from autolens.pipeline.phase.dataset.result import Result
 
 
-def default_mask_function(image):
+def default_mask_function(
+        shape_2d,
+        pixel_scales
+):
     return aa.mask.circular(
-        shape_2d=image.shape_2d,
-        pixel_scales=image.pixel_scales,
+        shape_2d=shape_2d,
+        pixel_scales=pixel_scales,
         sub_size=1,
         radius_arcsec=3.0,
     )

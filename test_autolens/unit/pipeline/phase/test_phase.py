@@ -243,7 +243,7 @@ class TestResult(object):
             phase_name="test_phase_2",
         )
 
-        result = phase_dataset_7x7.run(dataset=imaging_7x7)
+        result = phase_dataset_7x7.run(data=imaging_7x7)
 
         assert isinstance(result, al.AbstractPhase.Result)
 
@@ -256,16 +256,18 @@ class TestResult(object):
             mask_function=mask_function_7x7,
             galaxies=dict(
                 lens=al.galaxy(
-                    redshift=0.5, light=al.lp.EllipticalSersic(intensity=1.0)
+                    redshift=0.5,
+                    light=al.lp.EllipticalSersic(intensity=1.0)
                 ),
                 source=al.galaxy(
-                    redshift=1.0, light=al.lp.EllipticalCoreSersic(intensity=2.0)
+                    redshift=1.0,
+                    light=al.lp.EllipticalCoreSersic(intensity=2.0)
                 ),
             ),
             phase_name="test_phase_2",
         )
 
-        result = phase_dataset_7x7.run(dataset=imaging_7x7)
+        result = phase_dataset_7x7.run(data=imaging_7x7)
 
         assert isinstance(result.most_likely_tracer, al.tracer)
         assert result.most_likely_tracer.galaxies[0].light.intensity == 1.0
@@ -290,7 +292,7 @@ class TestPhasePickle(object):
 
         phase_dataset_7x7.make_analysis = make_analysis
         result = phase_dataset_7x7.run(
-            dataset=imaging_7x7, results=None, mask=None, positions=None
+            data=imaging_7x7, results=None, mask=None, positions=None
         )
         assert result is not None
 
