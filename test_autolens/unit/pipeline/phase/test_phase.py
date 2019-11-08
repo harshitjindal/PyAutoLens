@@ -35,13 +35,13 @@ def clean_images():
 
 
 class TestPhase(object):
-    def test__set_constants(self, phase_dataset_7x7):
-        phase_dataset_7x7.galaxies = [al.galaxy(redshift=0.5)]
-        assert phase_dataset_7x7.variable.galaxies == [al.galaxy(redshift=0.5)]
+    def test__set_constants(self, variable):
+        variable.galaxies = [al.galaxy(redshift=0.5)]
+        assert variable.galaxies == [al.galaxy(redshift=0.5)]
 
-    def test__set_variables(self, phase_dataset_7x7):
-        phase_dataset_7x7.galaxies = [al.GalaxyModel(redshift=0.5)]
-        assert phase_dataset_7x7.variable.galaxies == [al.GalaxyModel(redshift=0.5)]
+    def test__set_variables(self, variable):
+        variable.galaxies = [al.GalaxyModel(redshift=0.5)]
+        assert variable.galaxies == [al.GalaxyModel(redshift=0.5)]
 
     def test__customize(
         self, mask_function_7x7, results_7x7, results_collection_7x7, imaging_7x7
