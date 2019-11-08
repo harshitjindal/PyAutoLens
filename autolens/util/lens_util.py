@@ -38,7 +38,8 @@ def ordered_plane_redshifts_from_galaxies(galaxies):
         The list of galaxies in the ray-tracing calculation.
     """
     ordered_galaxies = sorted(
-        galaxies, key=lambda galaxy: galaxy.redshift, reverse=False
+        galaxies,
+        key=lambda galaxy: galaxy.redshift
     )
 
     # Ideally we'd extract the planes_red_Shfit order from the list above. However, I dont know how to extract it
