@@ -5,7 +5,7 @@ import autoarray as aa
 from autolens.lens.ray_tracing import GalaxyTracer
 from autolens.pipeline.phase import abstract
 from autolens.pipeline.phase import extensions
-from autolens.pipeline.phase.data.result import Result
+from autolens.pipeline.phase.dataset.result import Result
 
 
 def default_mask_function(image):
@@ -25,7 +25,7 @@ def isinstance_or_prior(obj, cls):
     return False
 
 
-class PhaseData(abstract.AbstractPhase):
+class PhaseDataset(abstract.AbstractPhase):
     tracer = af.PhaseProperty("tracer")
 
     Result = Result
