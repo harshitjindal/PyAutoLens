@@ -981,7 +981,7 @@ class GalaxyTracer(Tracer):
     def __init__(
             self,
             galaxies,
-            cosmology,
+            cosmology = None,
             hyper_background_noise: HyperBackgroundNoise = None,
             hyper_image_sky: HyperImageSky = None
     ):

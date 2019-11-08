@@ -5,6 +5,7 @@ from astropy import cosmology as cosmo
 
 import autofit as af
 from autolens.fit.fit import ImagingFit
+from autolens.lens.ray_tracing import GalaxyTracer
 from test_autolens.mock import mock_pipeline
 
 
@@ -36,9 +37,11 @@ def make_instance(all_galaxies):
 
 
 @pytest.fixture(name="result")
-def make_result(masked_imaging_7x7, instance):
+def make_result(masked_imaging_7x7, all_galaxies):
     return al.PhaseImaging.Result(
-        constant=instance,
+        constant=GalaxyTracer(
+            all_galaxies
+        ),
         figure_of_merit=1.0,
         previous_variable=af.ModelMapper(),
         gaussian_tuples=None,

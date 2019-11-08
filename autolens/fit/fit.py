@@ -24,7 +24,7 @@ def fit(masked_dataset, tracer, hyper_image_sky=None, hyper_background_noise=Non
 
 class ImagingFit(aa_fit.ImagingFit):
     def __init__(
-        self, masked_imaging, tracer, hyper_image_sky=None, hyper_background_noise=None
+        self, masked_imaging, tracer
     ):
         """ An  lens fitter, which contains the tracer's used to perform the fit and functions to manipulate \
         the lens dataset's hyper_galaxies.
@@ -41,13 +41,13 @@ class ImagingFit(aa_fit.ImagingFit):
         self.tracer = tracer
 
         image = hyper_image_from_image_and_hyper_image_sky(
-            image=masked_imaging.image, hyper_image_sky=hyper_image_sky
+            image=masked_imaging.image, hyper_image_sky=tracer.hyper_image_sky
         )
 
         noise_map = hyper_noise_map_from_noise_map_tracer_and_hyper_backkground_noise(
             noise_map=masked_imaging.noise_map,
             tracer=tracer,
-            hyper_background_noise=hyper_background_noise,
+            hyper_background_noise=tracer.hyper_background_noise,
         )
 
         self.blurred_profile_image = tracer.blurred_profile_image_from_grid_and_convolver(

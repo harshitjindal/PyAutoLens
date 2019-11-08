@@ -48,16 +48,8 @@ class Analysis(af.Analysis):
             tracer=instance
         )
 
-        hyper_image_sky = self.hyper_image_sky_for_instance(instance=instance)
-
-        hyper_background_noise = self.hyper_background_noise_for_instance(
-            instance=instance
-        )
-
         fit = self.masked_imaging_fit_for_tracer(
-            tracer=instance,
-            hyper_image_sky=hyper_image_sky,
-            hyper_background_noise=hyper_background_noise,
+            tracer=instance
         )
 
         return fit.figure_of_merit
@@ -109,27 +101,19 @@ class Analysis(af.Analysis):
             return instance.hyper_background_noise
 
     def masked_imaging_fit_for_tracer(
-            self, tracer, hyper_image_sky, hyper_background_noise
+            self, tracer
     ):
 
         return fit.ImagingFit(
             masked_imaging=self.masked_imaging,
-            tracer=tracer,
-            hyper_image_sky=hyper_image_sky,
-            hyper_background_noise=hyper_background_noise,
+            tracer=tracer
         )
 
     def visualize(self, instance, during_analysis):
         instance = self.associate_images(instance=instance)
-        hyper_image_sky = self.hyper_image_sky_for_instance(instance=instance)
-        hyper_background_noise = self.hyper_background_noise_for_instance(
-            instance=instance
-        )
 
         fit = self.masked_imaging_fit_for_tracer(
-            tracer=instance,
-            hyper_image_sky=hyper_image_sky,
-            hyper_background_noise=hyper_background_noise,
+            tracer=instance
         )
         self.visualizer.plot_ray_tracing(fit.tracer, during_analysis)
         self.visualizer.plot_fit(fit, during_analysis)

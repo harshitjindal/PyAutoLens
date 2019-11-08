@@ -546,7 +546,7 @@ class TestPhase(object):
         tracer = phase_imaging_7x7.variable.instance_from_prior_medians()
 
         fit = analysis.masked_imaging_fit_for_tracer(
-            tracer=tracer, hyper_image_sky=None, hyper_background_noise=None
+            tracer=tracer
         )
 
         assert fit.inversion.mapper.grid[4][0] == pytest.approx(97.19584, 1.0e-2)
@@ -567,7 +567,7 @@ class TestPhase(object):
         tracer = phase_imaging_7x7.variable.instance_from_prior_medians()
 
         fit = analysis.masked_imaging_fit_for_tracer(
-            tracer=tracer, hyper_image_sky=None, hyper_background_noise=None
+            tracer=tracer
         )
 
         assert fit.inversion.mapper.grid[4][0] == pytest.approx(200.0, 1.0e-4)
