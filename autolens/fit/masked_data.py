@@ -1,7 +1,7 @@
 import numpy as np
 
 import autoarray as aa
-from autolens.fit import masked_data
+from autoarray.fit import masked_data
 from autolens.fit import fit
 from autolens import exc
 

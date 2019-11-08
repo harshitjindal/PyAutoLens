@@ -1,17 +1,16 @@
 from autoarray.mask.mask import Mask as mask
-from autoarray.structures.arrays import Array as array
-from autoarray.masked.masked_structures import MaskedArray as masked_array
-from autoarray.masked.masked_structures import MaskedGrid as masked_grid
+from autoarray.structures.arrays import Array as array, MaskedArray as masked_array
 from autoarray.structures.grids import (
     Grid as grid,
-    GridIrregular as irregular_grid,
+    MaskedGrid as masked_grid,
+    IrregularGrid as irregular_grid,
 )
 from autoarray.structures.kernel import Kernel as kernel
 from autoarray.structures.visibilities import Visibilities as visibilities
-# from autoarray.dataset.abstract_dataset import load_positions, output_positions
-from autoarray.dataset.imaging import Imaging as imaging
-from autoarray.dataset.interferometer import Interferometer as interferometer
-from autolens.fit.masked_data import (
+from autoarray.data.abstract_data import load_positions, output_positions
+from autoarray.data.imaging import Imaging as imaging
+from autoarray.data.interferometer import Interferometer as interferometer
+from autoarray.fit.masked_data import (
     MaskedImaging as masked_imaging,
     MaskedInterferometer as masked_interferometer,
 )
