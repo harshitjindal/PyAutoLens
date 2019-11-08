@@ -36,16 +36,16 @@ class VariableFixingHyperPhase(HyperPhase):
     def make_variable(self, constant):
         return constant.as_variable(self.variable_classes)
 
-    def run_hyper(self, data, results=None, **kwargs):
+    def run_hyper(self, dataset, results=None, **kwargs):
         """
         Run the phase, overriding the optimizer's variable instance with one created to
         only fit pixelization hyperparameters.
         """
         phase = self.make_hyper_phase()
-        phase.optimizer.variable = self.make_variable(results.last.constant)
+        phase.variable = self.make_variable(results.last.constant)
 
         return phase.run(
-            data,
+            dataset,
             results=results,
             mask=results.last.mask,
             positions=results.last.positions,

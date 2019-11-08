@@ -2,12 +2,13 @@ import numpy as np
 from astropy import cosmology as cosmo
 from skimage import measure
 
-from autoarray.structures import arrays, visibilities as vis, grids
 import autofit as af
+from autoarray.structures import grids, visibilities as vis
+from autoarray.masked import masked_structures
 from autoastro.util import cosmology_util
 from autolens import exc
 from autoastro import dimensions as dim
-from autolens.lens.util import lens_util
+from autolens.util import lens_util
 
 
 class AbstractPlane(object):
@@ -198,7 +199,7 @@ class AbstractPlaneLensing(AbstractPlaneCosmology):
         The image is calculated on the sub-grid and binned-up to the original grid by taking the mean
         value of every set of sub-pixels, provided the *returned_binned_sub_grid* bool is *True*.
 
-        If the plane has no galaxies (or no galaxies have mass profiles) an array of all zeros the shape of the plane's
+        If the plane has no galaxies (or no galaxies have mass profiles) an arrays of all zeros the shape of the plane's
         sub-grid is returned.
 
         Parameters
@@ -230,7 +231,7 @@ class AbstractPlaneLensing(AbstractPlaneCosmology):
         The convergence is calculated on the sub-grid and binned-up to the original grid by taking the mean
         value of every set of sub-pixels, provided the *returned_binned_sub_grid* bool is *True*.
 
-        If the plane has no galaxies (or no galaxies have mass profiles) an array of all zeros the shape of the plane's
+        If the plane has no galaxies (or no galaxies have mass profiles) an arrays of all zeros the shape of the plane's
         sub-grid is returned.
 
         Parameters
@@ -238,7 +239,7 @@ class AbstractPlaneLensing(AbstractPlaneCosmology):
         grid : Grid
             The grid (or sub) of (y,x) arc-second coordinates at the centre of every unmasked pixel which the \
             potential is calculated on.
-        galaxies : [galaxy.Galaxy]
+        galaxies : [g.Galaxy]
             The galaxies whose mass profiles are used to compute the surface densities.
         """
         if self.galaxies:
@@ -258,7 +259,7 @@ class AbstractPlaneLensing(AbstractPlaneCosmology):
         The potential is calculated on the sub-grid and binned-up to the original grid by taking the mean
         value of every set of sub-pixels, provided the *returned_binned_sub_grid* bool is *True*.
 
-        If the plane has no galaxies (or no galaxies have mass profiles) an array of all zeros the shape of the plane's
+        If the plane has no galaxies (or no galaxies have mass profiles) an arrays of all zeros the shape of the plane's
         sub-grid is returned.
 
         Parameters
@@ -266,7 +267,7 @@ class AbstractPlaneLensing(AbstractPlaneCosmology):
         grid : Grid
             The grid (or sub) of (y,x) arc-second coordinates at the centre of every unmasked pixel which the \
             potential is calculated on.
-        galaxies : [galaxy.Galaxy]
+        galaxies : [g.Galaxy]
             The galaxies whose mass profiles are used to compute the surface densities.
         """
         if self.galaxies:
@@ -417,7 +418,7 @@ class AbstractPlaneLensing(AbstractPlaneCosmology):
             shape_2d=tangential_eigen_values.sub_shape_2d,
         )
 
-        return grids.IrregularGrid(grid=tangential_critical_curve)
+        return grids.GridIrregular(grid=tangential_critical_curve)
 
     def radial_critical_curve_from_grid(self, grid):
 
@@ -435,7 +436,7 @@ class AbstractPlaneLensing(AbstractPlaneCosmology):
             shape_2d=radial_eigen_values.sub_shape_2d,
         )
 
-        return grids.IrregularGrid(grid=radial_critical_curve)
+        return grids.GridIrregular(grid=radial_critical_curve)
 
     def tangential_caustic_from_grid(self, grid):
 
@@ -755,7 +756,7 @@ class AbstractPlaneData(AbstractPlaneLensing):
         Parameters
         -----------
         noise_map : imaging.NoiseMap or ndarray
-            An array describing the RMS standard deviation error in each pixel, preferably in units of electrons per
+            An arrays describing the RMS standard deviation error in each pixel, preferably in units of electrons per
             second.
         """
         hyper_noise_maps = []
@@ -773,7 +774,9 @@ class AbstractPlaneData(AbstractPlaneLensing):
 
             else:
 
-                hyper_noise_maps.append(arrays.MaskedArray.zeros(mask=noise_map.mask))
+                hyper_noise_maps.append(
+                    masked_structures.MaskedArray.zeros(mask=noise_map.mask)
+                )
 
         return hyper_noise_maps
 

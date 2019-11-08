@@ -3,10 +3,10 @@ import numpy as np
 import autofit as af
 import autoarray as aa
 from autoastro.galaxy import galaxy as g
-from autolens.pipeline.phase import data
+from autolens.pipeline.phase import dataset
 
 
-class Result(data.Result):
+class Result(dataset.Result):
     @property
     def most_likely_fit(self):
 
@@ -47,7 +47,7 @@ class Result(data.Result):
         Returns
         -------
         ndarray or None
-            A numpy array giving the model image of that galaxy
+            A numpy arrays giving the model image of that galaxy
         """
         return self.most_likely_fit.galaxy_model_image_dict[galaxy]
 
@@ -88,7 +88,7 @@ class Result(data.Result):
     @property
     def hyper_model_image(self):
 
-        hyper_model_image = aa.masked_array.zeros(mask=self.mask.mask_sub_1)
+        hyper_model_image = aa.masked.array.zeros(mask=self.mask.mask_sub_1)
 
         for path, galaxy in self.path_galaxy_tuples:
             hyper_model_image += self.hyper_galaxy_image_path_dict[path]

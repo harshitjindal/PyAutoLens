@@ -1,11 +1,12 @@
 import autofit as af
-from autolens.fit import fit
 from autoastro.galaxy import galaxy as g
+from autolens.fit import fit
 from autolens.pipeline import visualizer
 
 
 class Analysis(af.Analysis):
     def __init__(self, masked_imaging, image_path=None, results=None):
+
         self.visualizer = visualizer.PhaseImagingVisualizer(masked_imaging, image_path)
 
         self.masked_imaging = masked_imaging
@@ -87,7 +88,7 @@ class Analysis(af.Analysis):
         """
         if hasattr(self, "hyper_galaxy_image_path_dict"):
             for galaxy_path, galaxy in instance.path_instance_tuples_for_class(
-                g.Galaxy
+                    g.Galaxy
             ):
                 if galaxy_path in self.hyper_galaxy_image_path_dict:
                     galaxy.hyper_model_image = self.hyper_model_image
@@ -108,7 +109,7 @@ class Analysis(af.Analysis):
             return instance.hyper_background_noise
 
     def masked_imaging_fit_for_tracer(
-        self, tracer, hyper_image_sky, hyper_background_noise
+            self, tracer, hyper_image_sky, hyper_background_noise
     ):
 
         return fit.ImagingFit(
@@ -131,4 +132,4 @@ class Analysis(af.Analysis):
             hyper_background_noise=hyper_background_noise,
         )
         self.visualizer.plot_ray_tracing(fit.tracer, during_analysis)
-        self.visualizer.plot_masked_imaging(fit, during_analysis)
+        self.visualizer.plot_fit(fit, during_analysis)

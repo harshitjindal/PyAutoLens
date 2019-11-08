@@ -4,19 +4,20 @@ import pytest
 from astropy import cosmology as cosmo
 
 import autofit as af
+from autolens.fit.fit import ImagingFit
 from test_autolens.mock import mock_pipeline
 
 
 @pytest.fixture(name="lens_galaxy")
 def make_lens_galaxy():
-    return al.Galaxy(
+    return al.galaxy(
         redshift=1.0, light=al.lp.SphericalSersic(), mass=al.mp.SphericalIsothermal()
     )
 
 
 @pytest.fixture(name="source_galaxy")
 def make_source_galaxy():
-    return al.Galaxy(redshift=2.0, light=al.lp.SphericalSersic())
+    return al.galaxy(redshift=2.0, light=al.lp.SphericalSersic())
 
 
 @pytest.fixture(name="all_galaxies")
@@ -155,12 +156,12 @@ class TestVariableFixing(object):
 
         assert mapper.prior_count == 9
 
-        instance.lens_galaxy = al.Galaxy(
+        instance.lens_galaxy = al.galaxy(
             pixelization=al.pix.Rectangular(),
             regularization=al.reg.Constant(),
             redshift=1.0,
         )
-        instance.source_galaxy = al.Galaxy(
+        instance.source_galaxy = al.galaxy(
             redshift=1.0, light=al.lp.EllipticalLightProfile()
         )
 
@@ -184,7 +185,7 @@ class TestImagePassing(object):
         assert isinstance(image_dict[("galaxies", "lens")], np.ndarray)
         assert isinstance(image_dict[("galaxies", "source")], np.ndarray)
 
-        result.constant.galaxies.lens = al.Galaxy(redshift=0.5)
+        result.constant.galaxies.lens = al.galaxy(redshift=0.5)
 
         image_dict = result.image_galaxy_dict
         assert (image_dict[("galaxies", "lens")].in_2d == np.zeros((7, 7))).all()
@@ -194,11 +195,13 @@ class TestImagePassing(object):
         self, mask_function_7x7, results_collection_7x7, imaging_7x7
     ):
 
-        mask = mask_function_7x7(image=imaging_7x7.image)
+        mask = mask_function_7x7(
+            shape_2d=imaging_7x7.shape_2d, pixel_scales=imaging_7x7.pixel_scales
+        )
 
         results_collection_7x7[0].galaxy_images = [
-            al.masked_array.full(fill_value=2.0, mask=mask),
-            al.masked_array.full(fill_value=2.0, mask=mask),
+            al.masked.array.full(fill_value=2.0, mask=mask),
+            al.masked.array.full(fill_value=2.0, mask=mask),
         ]
         results_collection_7x7[0].galaxy_images[0][3] = -1.0
         results_collection_7x7[0].galaxy_images[1][5] = -1.0
@@ -213,7 +216,7 @@ class TestImagePassing(object):
         )
 
         analysis = phase_imaging_7x7.make_analysis(
-            data=imaging_7x7, results=results_collection_7x7
+            dataset=imaging_7x7, results=results_collection_7x7
         )
 
         assert (
@@ -285,7 +288,7 @@ class TestImagePassing(object):
 
         hyper_model_image = lens_hyper_image + source_hyper_image
 
-        g0 = al.Galaxy(
+        g0 = al.galaxy(
             redshift=0.5,
             light_profile=instance.galaxies.lens.light,
             mass_profile=instance.galaxies.lens.mass,
@@ -294,11 +297,11 @@ class TestImagePassing(object):
             hyper_galaxy_image=lens_hyper_image,
             hyper_minimum_value=0.0,
         )
-        g1 = al.Galaxy(redshift=1.0, light_profile=instance.galaxies.source.light)
+        g1 = al.galaxy(redshift=1.0, light_profile=instance.galaxies.source.light)
 
-        tracer = al.Tracer.from_galaxies(galaxies=[g0, g1])
+        tracer = al.tracer.from_galaxies(galaxies=[g0, g1])
 
-        fit = al.ImagingFit(masked_imaging=masked_imaging_7x7, tracer=tracer)
+        fit = ImagingFit(masked_imaging=masked_imaging_7x7, tracer=tracer)
 
         assert (fit_figure_of_merit == fit.figure_of_merit).all()
 
@@ -397,7 +400,7 @@ class TestHyperGalaxyPhase(object):
         hyper_image_sky = al.hyper_data.HyperImageSky(sky_scale=1.0)
         hyper_background_noise = al.hyper_data.HyperBackgroundNoise(noise_scale=1.0)
 
-        lens_galaxy = al.Galaxy(
+        lens_galaxy = al.galaxy(
             redshift=0.5, light=al.lp.EllipticalSersic(intensity=0.1)
         )
 
@@ -411,17 +414,19 @@ class TestHyperGalaxyPhase(object):
             phase_name="test_phase",
         )
 
-        analysis = phase_imaging_7x7.make_analysis(data=imaging_7x7)
+        analysis = phase_imaging_7x7.make_analysis(dataset=imaging_7x7)
         instance = phase_imaging_7x7.variable.instance_from_unit_vector([])
 
-        mask = phase_imaging_7x7.meta_data_fit.setup_phase_mask(
-            data=imaging_7x7, mask=None
+        mask = phase_imaging_7x7.meta_imaging_fit.setup_phase_mask(
+            shape_2d=imaging_7x7.shape_2d,
+            pixel_scales=imaging_7x7.pixel_scales,
+            mask=None,
         )
         assert mask.sub_size == 2
 
-        masked_imaging = al.MaskedImaging(imaging=imaging_7x7, mask=mask)
+        masked_imaging = al.masked.imaging(imaging=imaging_7x7, mask=mask)
         tracer = analysis.tracer_for_instance(instance=instance)
-        fit = al.ImagingFit(
+        fit = ImagingFit(
             masked_imaging=masked_imaging,
             tracer=tracer,
             hyper_image_sky=hyper_image_sky,

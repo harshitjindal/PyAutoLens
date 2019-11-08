@@ -7,7 +7,7 @@ from autoarray.operators.inversion import inversions as inv
 from autoastro.util import cosmology_util
 from autoastro.galaxy import galaxy as g
 from autolens.lens import plane as pl
-from autolens.lens.util import lens_util
+from autolens.util import lens_util
 
 
 class AbstractTracer(object):
@@ -28,7 +28,7 @@ class AbstractTracer(object):
         galaxies : [Galaxy]
             The list of galaxies in the ray-tracing calculation.
         image_plane_grid : grid_stacks.GridStack
-            The image-plane al.ogrid which is traced. (includes the grid, sub-grid, blurring-grid, etc.).
+            The image-plane grid which is traced. (includes the grid, sub-grid, blurring-grid, etc.).
         border : masks.GridBorder
             The border of the grid, which is used to relocate demagnified traced pixels to the \
             source-plane borders.
@@ -269,9 +269,9 @@ class AbstractTracerLensing(AbstractTracerCosmology):
 
         return profile_images_of_planes
 
-    def padded_profile_image_from_grid_and_psf_shape(self, grid, psf_shape):
+    def padded_profile_image_from_grid_and_psf_shape(self, grid, psf_shape_2d):
 
-        padded_grid = grid.padded_grid_from_kernel_shape(kernel_shape=psf_shape)
+        padded_grid = grid.padded_grid_from_kernel_shape(kernel_shape_2d=psf_shape_2d)
 
         return self.profile_image_from_grid(grid=padded_grid)
 
@@ -312,7 +312,7 @@ class AbstractTracerLensing(AbstractTracerCosmology):
 
     def jacobian_a12_from_grid(self, grid):
 
-        deflections = self.deflections_from_grid(grid=grid)
+        deflections = self.deflections_between_planes_from_grid(grid=grid)
 
         return grid.mapping.array_from_sub_array_2d(
             sub_array_2d=-1.0
@@ -321,7 +321,7 @@ class AbstractTracerLensing(AbstractTracerCosmology):
 
     def jacobian_a21_from_grid(self, grid):
 
-        deflections = self.deflections_from_grid(grid=grid)
+        deflections = self.deflections_between_planes_from_grid(grid=grid)
 
         return grid.mapping.array_from_sub_array_2d(
             sub_array_2d=-1.0
@@ -330,7 +330,7 @@ class AbstractTracerLensing(AbstractTracerCosmology):
 
     def jacobian_a22_from_grid(self, grid):
 
-        deflections = self.deflections_from_grid(grid=grid)
+        deflections = self.deflections_between_planes_from_grid(grid=grid)
 
         return grid.mapping.array_from_sub_array_2d(
             sub_array_2d=1
@@ -411,8 +411,7 @@ class AbstractTracerLensing(AbstractTracerCosmology):
             grid_pixels_1d=tangential_critical_curve_indices[0],
             shape_2d=tangential_eigen_values.sub_shape_2d,
         )
-
-        return grids.IrregularGrid(grid=tangential_critical_curve)
+        return grids.GridIrregular(grid=tangential_critical_curve)
 
     def radial_critical_curve_from_grid(self, grid):
 
@@ -430,7 +429,7 @@ class AbstractTracerLensing(AbstractTracerCosmology):
             shape_2d=radial_eigen_values.sub_shape_2d,
         )
 
-        return grids.IrregularGrid(grid=radial_critical_curve)
+        return grids.GridIrregular(grid=radial_critical_curve)
 
     def tangential_caustic_from_grid(self, grid):
 
@@ -625,7 +624,7 @@ class AbstractTracerData(AbstractTracerLensing):
 
     def unmasked_blurred_profile_image_from_grid_and_psf(self, grid, psf):
 
-        padded_grid = grid.padded_grid_from_kernel_shape(kernel_shape=psf.shape_2d)
+        padded_grid = grid.padded_grid_from_kernel_shape(kernel_shape_2d=psf.shape_2d)
 
         padded_image = self.profile_image_from_grid(grid=padded_grid)
 
@@ -635,7 +634,7 @@ class AbstractTracerData(AbstractTracerLensing):
 
     def unmasked_blurred_profile_image_of_planes_from_grid_and_psf(self, grid, psf):
 
-        padded_grid = grid.padded_grid_from_kernel_shape(kernel_shape=psf.shape_2d)
+        padded_grid = grid.padded_grid_from_kernel_shape(kernel_shape_2d=psf.shape_2d)
 
         traced_padded_grids = self.traced_grids_of_planes_from_grid(grid=padded_grid)
 
@@ -658,7 +657,7 @@ class AbstractTracerData(AbstractTracerLensing):
 
         unmasked_blurred_profile_images_of_planes_and_galaxies = []
 
-        padded_grid = grid.padded_grid_from_kernel_shape(kernel_shape=psf.shape_2d)
+        padded_grid = grid.padded_grid_from_kernel_shape(kernel_shape_2d=psf.shape_2d)
 
         traced_padded_grids = self.traced_grids_of_planes_from_grid(grid=padded_grid)
 
@@ -734,9 +733,7 @@ class AbstractTracerData(AbstractTracerLensing):
                 traced_sparse_grids = self.traced_grids_of_planes_from_grid(
                     grid=sparse_image_plane_grids_of_planes[plane_index]
                 )
-                traced_sparse_grids_of_planes.append(
-                    traced_sparse_grids[plane_index]
-                )
+                traced_sparse_grids_of_planes.append(traced_sparse_grids[plane_index])
 
         return traced_sparse_grids_of_planes
 
@@ -752,8 +749,7 @@ class AbstractTracerData(AbstractTracerLensing):
         traced_grids_of_planes = self.traced_grids_of_planes_from_grid(grid=grid)
 
         traced_sparse_grids_of_planes = self.traced_sparse_grids_of_planes_from_grid(
-            grid=grid,
-            preload_sparse_grids_of_planes=preload_sparse_grids_of_planes,
+            grid=grid, preload_sparse_grids_of_planes=preload_sparse_grids_of_planes
         )
 
         for (plane_index, plane) in enumerate(self.planes):
@@ -790,6 +786,30 @@ class AbstractTracerData(AbstractTracerLensing):
             image=image,
             noise_map=noise_map,
             convolver=convolver,
+            mapper=mappers_of_planes[-1],
+            regularization=self.regularizations_of_planes[-1],
+        )
+
+    def inversion_intererometer_from_grid_and_data(
+        self,
+        grid,
+        visibilities,
+        noise_map,
+        transformer,
+        inversion_uses_border=False,
+        preload_sparse_grids_of_planes=None,
+    ):
+
+        mappers_of_planes = self.mappers_of_planes_from_grid(
+            grid=grid,
+            inversion_uses_border=inversion_uses_border,
+            preload_sparse_grids_of_planes=preload_sparse_grids_of_planes,
+        )
+
+        return inv.InversionInterferometer.from_data_mapper_and_regularization(
+            visibilities=visibilities,
+            noise_map=noise_map,
+            transformer=transformer,
             mapper=mappers_of_planes[-1],
             regularization=self.regularizations_of_planes[-1],
         )
@@ -910,7 +930,7 @@ class Tracer(AbstractTracerData):
         lens_galaxies : [Galaxy]
             The list of galaxies in the ray-tracing calculation.
         image_plane_grid : grid_stacks.GridStack
-            The image-plane al.ogrid which is traced. (includes the grid, sub-grid, blurring-grid, etc.).
+            The image-plane grid which is traced. (includes the grid, sub-grid, blurring-grid, etc.).
         planes_between_lenses : [int]
             The number of slices between each main plane. The first entry in this list determines the number of slices \
             between Earth (redshift 0.0) and main plane 0, the next between main planes 0 and 1, etc.
