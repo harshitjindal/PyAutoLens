@@ -7,7 +7,7 @@ from astropy import cosmology as cosmo
 
 import autofit as af
 import autolens as al
-from autofit.optimize.non_linear.multi_nest import Paths
+import autoastro as astr
 from autolens import exc
 from test_autolens.mock import mock_pipeline
 
@@ -181,15 +181,15 @@ class TestPhase(object):
             galaxies=dict(source=al.galaxy(redshift=0.5)),
             mask_function=mask_function_7x7,
             positions_threshold=50.0,
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             phase_name="test_phase",
         )
 
         analysis = phase_imaging_7x7.make_analysis(
             dataset=imaging_7x7, positions=[[[1.0, 1.0], [2.0, 2.0]]]
         )
-        instance = phase_imaging_7x7.variable.instance_from_unit_vector([])
-        tracer = analysis.tracer_for_instance(instance=instance)
+        instance = phase_imaging_7x7.variable.instance_from_prior_medians()
+        tracer = instance
 
         analysis.masked_imaging.check_positions_trace_within_threshold_via_tracer(
             tracer=tracer
@@ -199,15 +199,15 @@ class TestPhase(object):
             galaxies=dict(source=al.galaxy(redshift=0.5)),
             mask_function=mask_function_7x7,
             positions_threshold=0.0,
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             phase_name="test_phase",
         )
 
         analysis = phase_imaging_7x7.make_analysis(
             dataset=imaging_7x7, positions=[[[1.0, 1.0], [2.0, 2.0]]]
         )
-        instance = phase_imaging_7x7.variable.instance_from_unit_vector([])
-        tracer = analysis.tracer_for_instance(instance=instance)
+        instance = phase_imaging_7x7.variable.instance_from_prior_medians()
+        tracer = instance
 
         with pytest.raises(exc.RayTracingException):
             analysis.masked_imaging.check_positions_trace_within_threshold_via_tracer(
@@ -218,7 +218,7 @@ class TestPhase(object):
             galaxies=dict(source=al.galaxy(redshift=0.5)),
             mask_function=mask_function_7x7,
             positions_threshold=0.5,
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             phase_name="test_phase",
         )
 
@@ -256,8 +256,8 @@ class TestPhase(object):
             dataset=imaging_7x7,
             positions=[[[0.0, 0.0], [0.0, 0.0]], [[0.0, 0.0], [0.0, 0.0]]],
         )
-        instance = phase_imaging_7x7.variable.instance_from_unit_vector([])
-        tracer = analysis.tracer_for_instance(instance=instance)
+        instance = phase_imaging_7x7.variable.instance_from_prior_medians()
+        tracer = instance
 
         analysis.masked_imaging.check_positions_trace_within_threshold_via_tracer(
             tracer=tracer
@@ -267,8 +267,8 @@ class TestPhase(object):
             dataset=imaging_7x7,
             positions=[[[0.0, 0.0], [0.0, 0.0]], [[100.0, 0.0], [0.0, 0.0]]],
         )
-        instance = phase_imaging_7x7.variable.instance_from_unit_vector([])
-        tracer = analysis.tracer_for_instance(instance=instance)
+        instance = phase_imaging_7x7.variable.instance_from_prior_medians()
+        tracer = instance
 
         with pytest.raises(exc.RayTracingException):
             analysis.masked_imaging.check_positions_trace_within_threshold_via_tracer(
@@ -288,14 +288,13 @@ class TestPhase(object):
             ),
             mask_function=mask_function_7x7,
             inversion_pixel_limit=10,
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             phase_name="test_phase",
         )
 
         analysis = phase_imaging_7x7.make_analysis(dataset=imaging_7x7)
 
-        instance = phase_imaging_7x7.variable.instance_from_unit_vector([])
-        tracer = analysis.tracer_for_instance(instance=instance)
+        tracer = phase_imaging_7x7.variable.instance_from_prior_medians()
 
         analysis.masked_imaging.check_inversion_pixels_are_below_limit_via_tracer(
             tracer=tracer
@@ -311,13 +310,12 @@ class TestPhase(object):
             ),
             mask_function=mask_function_7x7,
             inversion_pixel_limit=10,
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             phase_name="test_phase",
         )
 
         analysis = phase_imaging_7x7.make_analysis(dataset=imaging_7x7)
-        instance = phase_imaging_7x7.variable.instance_from_unit_vector([])
-        tracer = analysis.tracer_for_instance(instance=instance)
+        instance = phase_imaging_7x7.variable.instance_from_prior_medians()
 
         with pytest.raises(exc.PixelizationException):
             analysis.masked_imaging.check_inversion_pixels_are_below_limit_via_tracer(
@@ -335,13 +333,13 @@ class TestPhase(object):
             ),
             mask_function=mask_function_7x7,
             inversion_pixel_limit=10,
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             phase_name="test_phase",
         )
 
         analysis = phase_imaging_7x7.make_analysis(dataset=imaging_7x7)
-        instance = phase_imaging_7x7.variable.instance_from_unit_vector([])
-        tracer = analysis.tracer_for_instance(instance=instance)
+        instance = phase_imaging_7x7.variable.instance_from_prior_medians()
+        tracer = instance
 
         analysis.masked_imaging.check_inversion_pixels_are_below_limit_via_tracer(
             tracer=tracer
@@ -357,13 +355,13 @@ class TestPhase(object):
             ),
             mask_function=mask_function_7x7,
             inversion_pixel_limit=10,
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             phase_name="test_phase",
         )
 
         analysis = phase_imaging_7x7.make_analysis(dataset=imaging_7x7)
-        instance = phase_imaging_7x7.variable.instance_from_unit_vector([])
-        tracer = analysis.tracer_for_instance(instance=instance)
+        instance = phase_imaging_7x7.variable.instance_from_prior_medians()
+        tracer = instance
 
         with pytest.raises(exc.PixelizationException):
             analysis.masked_imaging.check_inversion_pixels_are_below_limit_via_tracer(
@@ -391,7 +389,7 @@ class TestPhase(object):
         phase_imaging_7x7 = al.PhaseImaging(
             mask_function=mask_function_7x7,
             galaxies=[source_galaxy],
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             phase_name="test_phase",
         )
 
@@ -406,7 +404,7 @@ class TestPhase(object):
         phase_imaging_7x7 = al.PhaseImaging(
             mask_function=mask_function_7x7,
             galaxies=[source_galaxy],
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             phase_name="test_phase",
         )
 
@@ -423,7 +421,7 @@ class TestPhase(object):
         phase_imaging_7x7 = al.PhaseImaging(
             mask_function=mask_function_7x7,
             galaxies=[source_galaxy],
-            cosmology=cosmo.FLRW,
+            cosmology=cosmo.wCDM(1.0, 1.0, 1.0),
             phase_name="test_phase",
         )
 
@@ -545,8 +543,8 @@ class TestPhase(object):
         analysis = phase_imaging_7x7.make_analysis(dataset=imaging_7x7)
         analysis.masked_imaging.grid[4] = np.array([[500.0, 0.0]])
 
-        instance = phase_imaging_7x7.variable.instance_from_unit_vector([])
-        tracer = analysis.tracer_for_instance(instance=instance)
+        tracer = phase_imaging_7x7.variable.instance_from_prior_medians()
+
         fit = analysis.masked_imaging_fit_for_tracer(
             tracer=tracer, hyper_image_sky=None, hyper_background_noise=None
         )
@@ -566,8 +564,8 @@ class TestPhase(object):
 
         analysis.masked_imaging.grid[4] = np.array([300.0, 0.0])
 
-        instance = phase_imaging_7x7.variable.instance_from_unit_vector([])
-        tracer = analysis.tracer_for_instance(instance=instance)
+        tracer = phase_imaging_7x7.variable.instance_from_prior_medians()
+
         fit = analysis.masked_imaging_fit_for_tracer(
             tracer=tracer, hyper_image_sky=None, hyper_background_noise=None
         )
@@ -686,7 +684,7 @@ class TestResult(object):
             phase_name="test_phase_2",
         )
 
-        result = phase_imaging_7x7.run(dataset=imaging_7x7)
+        result = phase_imaging_7x7.run(imaging_7x7)
 
         assert isinstance(result, al.AbstractPhase.Result)
 
@@ -705,7 +703,7 @@ class TestResult(object):
             phase_name="test_phase_2",
         )
 
-        result = phase_imaging_7x7.run(dataset=imaging_7x7)
+        result = phase_imaging_7x7.run(imaging_7x7)
 
         mask = mask_function_7x7(
             shape_2d=imaging_7x7.shape_2d, pixel_scales=imaging_7x7.pixel_scales
@@ -722,7 +720,7 @@ class TestResult(object):
             optimizer_class=mock_pipeline.MockNLO,
             mask_function=mask_function_7x7,
             galaxies=[
-                al.Galaxy(
+                astr.galaxy(
                     redshift=0.5,
                     light=al.lp.EllipticalSersic(
                         intensity=1.0
@@ -732,7 +730,7 @@ class TestResult(object):
             phase_name="test_phase_2",
         )
 
-        result = phase_imaging_7x7.run(dataset=imaging_7x7)
+        result = phase_imaging_7x7.run(imaging_7x7)
 
         assert result.positions is None
 
@@ -749,7 +747,7 @@ class TestResult(object):
             phase_name="test_phase_2",
         )
 
-        result = phase_imaging_7x7.run(dataset=imaging_7x7, positions=[[[1.0, 1.0]]])
+        result = phase_imaging_7x7.run(imaging_7x7, positions=[[[1.0, 1.0]]])
 
         assert (result.positions[0] == np.array([1.0, 1.0])).all()
 
@@ -775,7 +773,7 @@ class TestResult(object):
             phase_name="test_phase_2",
         )
 
-        result = phase_imaging_7x7.run(dataset=imaging_7x7)
+        result = phase_imaging_7x7.run(imaging_7x7)
 
         assert isinstance(result.pixelization, al.pix.VoronoiMagnification)
         assert result.pixelization.shape == (2, 3)
@@ -799,7 +797,7 @@ class TestResult(object):
 
         phase_imaging_7x7.galaxies.source.hyper_galaxy_image = np.ones(9)
 
-        result = phase_imaging_7x7.run(dataset=imaging_7x7)
+        result = phase_imaging_7x7.run(imaging_7x7)
 
         assert isinstance(result.pixelization, al.pix.VoronoiBrightnessImage)
         assert result.pixelization.pixels == 6
@@ -818,7 +816,7 @@ class TestResult(object):
             phase_name="test_phase_2",
         )
 
-        result = phase_imaging_7x7.run(dataset=imaging_7x7)
+        result = phase_imaging_7x7.run(imaging_7x7)
 
         assert result.most_likely_pixelization_grids_of_planes == [None]
 
@@ -841,7 +839,7 @@ class TestResult(object):
 
         phase_imaging_7x7.galaxies.source.hyper_galaxy_image = np.ones(9)
 
-        result = phase_imaging_7x7.run(dataset=imaging_7x7)
+        result = phase_imaging_7x7.run(imaging_7x7)
 
         assert result.most_likely_pixelization_grids_of_planes[-1].shape == (6, 2)
 
@@ -864,7 +862,7 @@ class TestPhasePickle(object):
 
         phase_imaging_7x7.make_analysis = make_analysis
         result = phase_imaging_7x7.run(
-            dataset=imaging_7x7, results=None, mask=None, positions=None
+            imaging_7x7, results=None, mask=None, positions=None
         )
         assert result is not None
 
@@ -879,7 +877,7 @@ class TestPhasePickle(object):
 
         phase_imaging_7x7.make_analysis = make_analysis
         result = phase_imaging_7x7.run(
-            dataset=imaging_7x7, results=None, mask=None, positions=None
+            imaging_7x7, results=None, mask=None, positions=None
         )
         assert result is not None
 

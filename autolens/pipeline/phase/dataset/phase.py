@@ -113,7 +113,7 @@ class PhaseDataset(abstract.AbstractPhase):
         self.variable = self.variable.populate(results)
 
         analysis = self.make_analysis(
-            data=data, results=results, mask=mask, positions=positions
+            data, results=results, mask=mask, positions=positions
         )
 
         self.customize_priors(results)

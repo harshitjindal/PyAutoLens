@@ -27,7 +27,7 @@ class Result(af.Result):
 
     @property
     def most_likely_tracer(self):
-        return self.analysis.tracer_for_instance(instance=self.constant)
+        return self.constant
 
     @property
     def path_galaxy_tuples(self) -> [(str, g.Galaxy)]:

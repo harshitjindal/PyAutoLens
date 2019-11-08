@@ -307,7 +307,7 @@ class TestPhasePickle(object):
 
         phase_dataset_7x7.make_analysis = make_analysis
         result = phase_dataset_7x7.run(
-            dataset=imaging_7x7, results=None, mask=None, positions=None
+            imaging_7x7, results=None, mask=None, positions=None
         )
         assert result is not None
 
