@@ -92,7 +92,7 @@ class TestPhase(object):
             phase_name="test_phase_test_fit",
         )
 
-        result = phase_imaging_7x7.run(dataset=imaging_7x7)
+        result = phase_imaging_7x7.run(imaging_7x7)
         assert isinstance(result.constant.galaxies[0], al.galaxy)
         assert isinstance(result.constant.galaxies[0], al.galaxy)
 

@@ -92,7 +92,7 @@ class TestPhase(object):
             phase_name="test_phase_test_fit",
         )
 
-        result = phase_interferometer_7.run(dataset=interferometer_7)
+        result = phase_interferometer_7.run(interferometer_7)
         assert isinstance(result.constant.galaxies[0], al.galaxy)
         assert isinstance(result.constant.galaxies[0], al.galaxy)
 
