@@ -1,5 +1,7 @@
 import autofit as af
+from autoarray.exc import InversionException
 from autoastro.galaxy import galaxy as g
+from autofit.exc import FitException
 from autolens.fit import fit
 from autolens.pipeline import visualizer
 
@@ -48,11 +50,14 @@ class Analysis(af.Analysis):
             tracer=instance
         )
 
-        fit = self.masked_imaging_fit_for_tracer(
-            tracer=instance
-        )
+        try:
+            fit = self.masked_imaging_fit_for_tracer(
+                tracer=instance
+            )
 
-        return fit.figure_of_merit
+            return fit.figure_of_merit
+        except InversionException as e:
+            raise FitException from e
 
     def associate_images(self, instance: af.ModelInstance) -> af.ModelInstance:
         """

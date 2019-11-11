@@ -284,7 +284,7 @@ class TestPhase(object):
             mask=None,
         )
         masked_imaging = al.masked.imaging(imaging=imaging_7x7, mask=mask)
-        tracer = analysis.tracer_for_instance(instance=instance)
+        tracer = instance
 
         fit = al.fit(masked_dataset=masked_imaging, tracer=tracer)
 
@@ -323,11 +323,12 @@ class TestPhase(object):
 
         masked_imaging = al.masked.imaging(imaging=imaging_7x7, mask=mask)
 
+        instance.hyper_image_sky = hyper_image_sky
+        instance.hyper_background_noise = hyper_background_noise
+
         fit = ImagingFit(
             masked_imaging=masked_imaging,
             tracer=instance,
-            hyper_image_sky=hyper_image_sky,
-            hyper_background_noise=hyper_background_noise,
         )
 
         assert fit.likelihood == fit_figure_of_merit

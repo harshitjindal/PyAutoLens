@@ -5,7 +5,8 @@ from skimage import measure
 
 from autoarray.operators.inversion import inversions as inv
 from autoarray.structures import grids
-from autoastro.galaxy import galaxy as g, Galaxy
+from autoastro.galaxy import Galaxy
+from autoastro.galaxy import galaxy as g
 from autoastro.hyper.hyper_data import HyperBackgroundNoise, HyperImageSky
 from autoastro.util import cosmology_util
 from autolens.lens import plane as pl
@@ -792,7 +793,7 @@ class AbstractTracerData(AbstractTracerLensing):
             regularization=self.regularizations_of_planes[-1],
         )
 
-    def inversion_intererometer_from_grid_and_data(
+    def inversion_interferometer_from_grid_and_data(
             self,
             grid,
             visibilities,
@@ -801,7 +802,6 @@ class AbstractTracerData(AbstractTracerLensing):
             inversion_uses_border=False,
             preload_sparse_grids_of_planes=None,
     ):
-
         mappers_of_planes = self.mappers_of_planes_from_grid(
             grid=grid,
             inversion_uses_border=inversion_uses_border,
@@ -906,6 +906,18 @@ class Tracer(AbstractTracerData):
             galaxies,
             cosmology
         )
+        galaxies_in_planes = lens_util.galaxies_in_redshift_ordered_planes_from_galaxies(
+            galaxies=galaxies, plane_redshifts=plane_redshifts
+        )
+
+        planes = []
+
+        for plane_index in range(0, len(plane_redshifts)):
+            planes.append(
+                pl.Plane(galaxies=galaxies_in_planes[plane_index], cosmology=cosmology)
+            )
+
+        return Tracer(planes=planes, cosmology=cosmology)
 
     @classmethod
     def sliced_tracer_from_lens_line_of_sight_and_source_galaxies(

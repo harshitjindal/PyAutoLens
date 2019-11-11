@@ -15,12 +15,13 @@ class PhaseInterferometer(dataset.PhaseDataset):
     Analysis = Analysis
     Result = Result
 
+    @af.convert_paths
     def __init__(
             self,
-            phase_name,
+            paths,
+            *,
             real_space_shape_2d,
             real_space_pixel_scales,
-            phase_folders=tuple(),
             galaxies=None,
             hyper_background_noise=None,
             optimizer_class=af.MultiNest,
@@ -51,7 +52,7 @@ class PhaseInterferometer(dataset.PhaseDataset):
         if type(real_space_pixel_scales) is float:
             real_space_pixel_scales = (real_space_pixel_scales, real_space_pixel_scales)
 
-        phase_tag = phase_tagging.phase_tag_from_phase_settings(
+        paths.phase_tag = phase_tagging.phase_tag_from_phase_settings(
             sub_size=sub_size,
             real_space_shape_2d=real_space_shape_2d,
             real_space_pixel_scales=real_space_pixel_scales,
@@ -62,9 +63,7 @@ class PhaseInterferometer(dataset.PhaseDataset):
         )
 
         super().__init__(
-            phase_name=phase_name,
-            phase_tag=phase_tag,
-            phase_folders=phase_folders,
+            paths,
             galaxies=galaxies,
             optimizer_class=optimizer_class,
             cosmology=cosmology,

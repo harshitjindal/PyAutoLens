@@ -3,6 +3,7 @@ import pytest
 from astropy import cosmology as cosmo
 
 import autofit as af
+import autofit.optimize.non_linear.paths
 import autolens as al
 from autolens.fit.fit import ImagingFit
 from autolens.lens.ray_tracing import GalaxyTracer
@@ -100,7 +101,7 @@ class MockOptimizer(af.NonLinearOptimizer):
             self, phase_name="mock_optimizer", phase_tag="tag", phase_folders=tuple()
     ):
         super().__init__(
-            paths=af.Paths(
+            paths=autofit.optimize.non_linear.paths.Paths(
                 phase_name=phase_name, phase_tag=phase_tag, phase_folders=phase_folders
             )
         )
@@ -112,7 +113,7 @@ class MockOptimizer(af.NonLinearOptimizer):
 
 class MockPhase(object):
     def __init__(self):
-        self.paths = af.Paths(
+        self.paths = autofit.optimize.non_linear.paths.Paths(
             phase_name="phase_name",
             phase_path="phase_path",
             phase_folders=("",),
@@ -302,7 +303,7 @@ class TestImagePassing(object):
             contribution_factor=1.0, noise_factor=1.0, noise_power=1.0
         )
 
-        instance.galaxies.lens.hyper_galaxy = hyper_galaxy
+        tracer.galaxies.lens.hyper_galaxy = hyper_galaxy
 
         fit_figure_of_merit = analysis.fit(instance=tracer)
 

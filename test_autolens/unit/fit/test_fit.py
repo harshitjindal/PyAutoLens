@@ -1010,7 +1010,7 @@ class TestImagingFit:
             tracer = al.tracer.from_galaxies(galaxies=[al.galaxy(redshift=0.5), g0])
 
             tracer.hyper_image_sky = hyper_image_sky
-            tracer.hyper_background_noise = hyper_background_noise,
+            tracer.hyper_background_noise = hyper_background_noise
 
             fit = ImagingFit(
                 masked_imaging=masked_imaging_7x7,
@@ -1982,7 +1982,7 @@ class TestInterferometerFit:
                 reconstruction=fit.inversion.reconstruction,
             )
 
-            assert (fit.inversion.mapped_reconstructed_image == mapped_reconstructed_image).all()
+            assert (fit.inversion.mapped_reconstructed_image.in_1d == mapped_reconstructed_image).all()
 
         def test___lens_fit_galaxy_model_visibilities_dict__has_inversion_mapped_reconstructed_visibilities(
                 self, masked_interferometer_7
@@ -2164,7 +2164,7 @@ class TestInterferometerFit:
                 reconstruction=fit.inversion.reconstruction,
             )
 
-            assert (fit.inversion.mapped_reconstructed_image == mapped_reconstructed_image).all()
+            assert (fit.inversion.mapped_reconstructed_image.in_1d == mapped_reconstructed_image).all()
 
         def test___lens_fit_galaxy_model_visibilities_dict__has_profile_visibilitiess_and_inversion_mapped_reconstructed_visibilities(
                 self, masked_interferometer_7

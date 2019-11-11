@@ -8,13 +8,13 @@ from autolens.pipeline.phase.abstract.result import Result
 class AbstractPhase(af.AbstractPhase):
     Result = Result
 
+    @af.convert_paths
     def __init__(
-        self,
-        phase_name,
-        phase_tag=None,
-        phase_folders=tuple(),
-        optimizer_class=af.MultiNest,
-        model=None,
+            self,
+            paths,
+            *,
+            optimizer_class=af.MultiNest,
+            model=None,
     ):
         """
         A phase in an lens pipeline. Uses the set non_linear optimizer to try to fit
@@ -24,16 +24,10 @@ class AbstractPhase(af.AbstractPhase):
         ----------
         optimizer_class: class
             The class of a non_linear optimizer
-        phase_name: str
-            The name of this phase
         """
 
         super().__init__(
-            paths=af.Paths(
-                phase_name=phase_name,
-                phase_tag=phase_tag,
-                phase_folders=phase_folders
-            ),
+            paths=paths,
             optimizer_class=optimizer_class,
             model=model
         )
